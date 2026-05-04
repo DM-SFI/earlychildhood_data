@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<title>פייפליין מיפוי מסגרות גיל הרך</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Segoe UI', Arial, sans-serif;
+    background: #f5f6fa;
+    color: #1a1d2e;
+    padding: 20px 24px 24px;
+  }
+
+  h1 { text-align: center; font-size: 22px; color: #555; margin-bottom: 20px; font-weight: 600; }
+
+  .track-label {
+    writing-mode: vertical-rl;
+    text-orientation: mixed;
+    transform: rotate(180deg);
+    font-size: 15px;
+    font-weight: 800;
+    padding: 6px 4px;
+    border-radius: 6px;
+    color: #fff;
+    text-align: center;
+    margin-left: 10px;
+    min-width: 26px;
+    letter-spacing: 0.5px;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+  .track-label.official { background: #2d6be4; }
+  .track-label.community { background: #e67e22; }
+
+  .stage-box {
+    border: 2px solid;
+    border-radius: 8px;
+    padding: 8px 10px;
+    background: #fff;
+    min-width: 130px;
+    flex-shrink: 0;
+  }
+  .stage-box.official { border-color: #2d6be4; }
+  .stage-box.community { border-color: #e67e22; }
+
+  .stage-box .title {
+    font-size: 15px; font-weight: 800; margin-bottom: 5px;
+    padding-bottom: 4px; border-bottom: 1px solid #eee;
+  }
+  .official .title { color: #2d6be4; }
+  .community .title { color: #e67e22; }
+
+  .item {
+    font-size: 14px; padding: 3px 5px; border-radius: 4px;
+    background: #f7f8fc; margin-bottom: 3px; line-height: 1.35; color: #1a1d2e;
+  }
+  .item:last-child { margin-bottom: 0; }
+  .item.highlight { background: #eef3fd; color: #2d6be4; font-weight: 700; border: 1px solid #c7d8f8; }
+  .item.highlight-orange { background: #fef3e2; color: #e67e22; font-weight: 700; border: 1px solid #f5d08a; }
+  .item.highlight-purple { background: #f5eeff; color: #8e44ad; font-weight: 700; border: 1px solid #d7baee; }
+  .item.highlight-green { background: #e8f8f0; color: #27ae60; font-weight: 700; border: 1px solid #9ddcba; }
+
+  .arrow { font-size: 26px; color: #bbb; padding: 0 6px; flex-shrink: 0; }
+
+  .validate-box {
+    border: 2px solid #16a085; border-radius: 8px; padding: 8px 10px;
+    background: #fff; min-width: 150px; flex-shrink: 0;
+  }
+  .validate-box .title { font-size: 15px; font-weight: 800; color: #16a085; margin-bottom: 5px; padding-bottom: 4px; border-bottom: 1px solid #eee; }
+
+  .output-box {
+    border: 2px solid #27ae60; border-radius: 8px; padding: 8px 10px;
+    background: #fff; min-width: 130px; flex-shrink: 0;
+  }
+  .output-box .title { font-size: 15px; font-weight: 800; color: #27ae60; margin-bottom: 5px; padding-bottom: 4px; border-bottom: 1px solid #eee; }
+
+  .sfi-band {
+    margin-top: 14px;
+    border: 2px dashed #2d6be4;
+    border-radius: 10px;
+    padding: 10px 16px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    background: #eef3fd;
+    direction: rtl;
+  }
+  .sfi-band .icon { font-size: 20px; }
+  .sfi-band .text { font-size: 12.5px; color: #2d6be4; font-weight: 600; }
+  .sfi-band .sub { font-size: 11px; color: #5580c8; margin-top: 2px; }
+
+  .note-box {
+    background: #fff8e1; border: 1px solid #f5d08a;
+    border-radius: 7px; padding: 8px 12px;
+    font-size: 15px; color: #7a5c00;
+    direction: rtl; margin-top: 10px;
+  }
+
+  .flex { display: flex; align-items: center; gap: 0; }
+</style>
+</head>
+<body>
+
+<h1>פייפליין מיפוי מסגרות — שני נתיבי איסוף</h1>
+
+<div style="display: flex; align-items: stretch; direction: rtl; margin-bottom: 10px;">
+
+  <!-- Two tracks stacked on the right -->
+  <div style="display: flex; flex-direction: column; gap: 14px; flex-shrink: 0;">
+
+    <!-- Official (blue) track -->
+    <div class="flex">
+      <div class="track-label official">רשמי</div>
+      <div class="stage-box official">
+        <div class="title">מקורות ממשלתיים</div>
+        <div class="item">משרד החינוך — סמל</div>
+        <div class="item">זרוע העבודה — משפחתונים</div>
+        <div class="item">ביטוח לאומי — ללא סמל <span style="color:#e67e22; font-size:9px; font-weight:800;">*</span></div>
+        <div class="item">משרד הרווחה — שיקומיות <span style="color:#e67e22; font-size:9px; font-weight:800;">**</span></div>
+        <div class="item">נתוני רשות פנימיים</div>
+      </div>
+      <div class="arrow">←</div>
+      <div class="stage-box official">
+        <div class="title">סינון לרשות + עיבוד</div>
+        <div class="item highlight">סינון לפי קוד רשות</div>
+        <div class="item">נרמול שמות / כתובות</div>
+        <div class="item">גיאוקודינג</div>
+        <div class="item">הסרת כפילויות</div>
+      </div>
+      <div class="arrow">←</div>
+      <div class="stage-box official" style="min-width: 120px;">
+        <div class="title">רשומות מובנות</div>
+        <div class="item highlight">~90 מסגרות<br>מזוהות אוטומטית</div>
+        <div class="item">סטטוס: "לאימות"</div>
+      </div>
+    </div>
+
+    <!-- Community (orange) track -->
+    <div class="flex">
+      <div class="track-label community">קהילתי</div>
+      <div class="stage-box community">
+        <div class="title">מקורות קהילתיים</div>
+        <div class="item">קבוצות פייסבוק שכונתיות</div>
+        <div class="item">טיפת חלב — שאלוני אחות</div>
+        <div class="item">פה לאוזן — הורים / שכנים</div>
+        <div class="item">טופס דיווח אנונימי</div>
+      </div>
+      <div class="arrow">←</div>
+      <div class="stage-box community">
+        <div class="title">איסוף + סיווג ראשוני</div>
+        <div class="item highlight-orange">לא נתון — ליד</div>
+        <div class="item">מיצוי שם / מיקום גס</div>
+        <div class="item">סיווג: מסגרת? פיראטית?</div>
+        <div class="item">דחיפות: גבוהה / רגילה</div>
+      </div>
+      <div class="arrow">←</div>
+      <div class="stage-box community" style="min-width: 120px;">
+        <div class="title">תור לידים</div>
+        <div class="item highlight-orange">~27 לידים<br>פתוחים לחקירה</div>
+        <div class="item">סטטוס: "לבדיקה"</div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Merge connector -->
+  <div style="display: flex; flex-direction: column; justify-content: space-between; align-items: center; padding: 8px 12px; flex-shrink: 0;">
+    <div style="font-size: 36px; color: #2d6be4; line-height: 1;">↙</div>
+    <div style="font-size: 14px; color: #8e44ad; font-weight: 800; padding: 2px 5px; background: #f5eeff; border-radius: 4px; white-space: nowrap;">מיזוג</div>
+    <div style="font-size: 36px; color: #e67e22; line-height: 1;">↖</div>
+  </div>
+
+  <!-- Shared green boxes centered between the two tracks -->
+  <div style="display: flex; align-items: center; gap: 0; flex-shrink: 0;">
+    <div class="validate-box">
+      <div class="title">אימות הממונה</div>
+      <div class="item highlight-purple">ממשק עבודה יומיומי</div>
+      <div class="item">אישור רשומות רשמיות</div>
+      <div class="item">חקירת לידים קהילתיים</div>
+      <div class="item">הוספה ידנית</div>
+      <div class="item">סימון לבירור</div>
+    </div>
+    <div class="arrow">←</div>
+    <div class="output-box">
+      <div class="title">פלטי הרשות</div>
+      <div class="item highlight-green">דשבורד</div>
+      <div class="item">מפת מסגרות</div>
+      <div class="item">דוח פערים</div>
+      <div class="item">Excel / דיווח</div>
+    </div>
+  </div>
+
+</div>
+
+<div class="note-box">
+  <strong>⚠️ עיקרון מפתח:</strong> מקורות קהילתיים לא מייצרים רשומות — הם מייצרים <strong>לידים</strong>. הממונה היא שהופכת ליד לרשומה מאומתת לאחר בדיקה בשטח או פנייה ישירה.
+</div>
+
+
+<div style="margin-top: 8px; background: #f7f8fc; border: 1px solid #e5e7ef; border-radius: 7px; padding: 8px 12px; font-size: 11px; color: #555; direction: rtl; line-height: 1.8;">
+  <span style="color:#e67e22; font-weight:800;">*</span> <strong>ביטוח לאומי</strong> — מקור עקיף: המסגרות מופיעות כמעסיקים רשומים, לא כמסגרות גיל הרך מסווגות. נגישות הנתונים וישימותם טעונות בירור כחלק מהיתכנות.<br>
+  <span style="color:#e67e22; font-weight:800;">**</span> <strong>משרד הרווחה</strong> — מקור ישיר אך צר טווח: מכסה שיקומיות בלבד (ילדים עם צרכים מיוחדים). הרשות ממנת ומפקחת ישירות — נתון אמין לאותה קבוצה ספציפית.
+</div>
+</body>
+</html>

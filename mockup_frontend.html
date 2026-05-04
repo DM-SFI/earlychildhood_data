@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html dir="rtl" lang="he">
+<head>
+<meta charset="UTF-8">
+<title>מיפוי מסגרות גיל הרך — ממשק ממונה</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', Arial, sans-serif; background: #f5f6fa; color: #1a1d2e; font-size: 14px; direction: rtl; }
+
+  .app-header {
+    background: #fff;
+    border-bottom: 2px solid #2d6be4;
+    padding: 14px 24px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .app-title { font-size: 17px; font-weight: 700; color: #2d6be4; }
+  .app-subtitle { font-size: 12px; color: #888; margin-top: 2px; }
+  .user-badge { font-size: 12px; background: #eef3fd; color: #2d6be4; padding: 4px 12px; border-radius: 20px; font-weight: 600; }
+
+  .progress-bar-section {
+    background: #fff;
+    border-bottom: 1px solid #e5e7ef;
+    padding: 14px 24px;
+    display: flex;
+    align-items: center;
+    gap: 24px;
+  }
+  .progress-label { font-size: 13px; color: #555; white-space: nowrap; }
+  .progress-label strong { color: #1a1d2e; }
+  .progress-track { flex: 1; height: 10px; background: #e9ecf3; border-radius: 5px; overflow: hidden; }
+  .progress-fill { height: 100%; background: linear-gradient(90deg, #2d6be4, #4a90e2); border-radius: 5px; width: 58%; }
+  .progress-pct { font-size: 13px; font-weight: 700; color: #2d6be4; white-space: nowrap; }
+
+  .stat-row { display: flex; gap: 12px; padding: 16px 24px 0; }
+  .stat-card {
+    background: #fff;
+    border: 1px solid #e5e7ef;
+    border-radius: 10px;
+    padding: 12px 18px;
+    flex: 1;
+    text-align: center;
+  }
+  .stat-card .num { font-size: 22px; font-weight: 800; }
+  .stat-card .lbl { font-size: 11px; color: #888; margin-top: 2px; }
+  .stat-card.green .num { color: #27ae60; }
+  .stat-card.amber .num { color: #e67e22; }
+  .stat-card.red .num { color: #e74c3c; }
+  .stat-card.blue .num { color: #2d6be4; }
+  .stat-card.grey .num { color: #95a5a6; }
+
+  .toolbar { display: flex; align-items: center; gap: 10px; padding: 14px 24px; }
+  .toolbar-title { font-size: 14px; font-weight: 700; flex: 1; }
+  .btn-add {
+    background: #2d6be4; color: #fff; border: none; border-radius: 7px;
+    padding: 8px 16px; font-size: 13px; font-weight: 600; cursor: pointer;
+  }
+
+  .filter-tabs { display: flex; gap: 6px; padding: 0 24px 10px; }
+  .tab {
+    padding: 5px 14px; border-radius: 20px; font-size: 12px; font-weight: 600;
+    cursor: pointer; border: 1.5px solid transparent; background: #f5f6fa; color: #555;
+  }
+  .tab.active { background: #eef3fd; color: #2d6be4; border-color: #2d6be4; }
+  .tab .cnt { font-size: 11px; margin-right: 4px; opacity: 0.7; }
+
+  .table-wrap { padding: 0 24px 24px; }
+  table { width: 100%; border-collapse: collapse; background: #fff; border-radius: 10px; overflow: hidden; border: 1px solid #e5e7ef; }
+  thead { background: #f7f8fc; }
+  th { padding: 10px 12px; text-align: right; font-size: 12px; font-weight: 700; color: #888; border-bottom: 1px solid #e5e7ef; }
+  td { padding: 11px 12px; font-size: 13px; border-bottom: 1px solid #f0f2f8; vertical-align: middle; }
+  tr:last-child td { border-bottom: none; }
+  tr:hover td { background: #fafbff; }
+
+  .badge { display: inline-block; padding: 3px 10px; border-radius: 20px; font-size: 11px; font-weight: 700; white-space: nowrap; }
+  .badge-green { background: #e8f8f0; color: #27ae60; }
+  .badge-amber { background: #fef3e2; color: #e67e22; }
+  .badge-red { background: #fdecea; color: #e74c3c; }
+  .badge-purple { background: #f3eeff; color: #7c3aed; }
+
+  .status-badge { display: inline-flex; align-items: center; gap: 5px; padding: 3px 10px; border-radius: 20px; font-size: 11px; font-weight: 700; }
+  .status-confirmed { background: #e8f8f0; color: #27ae60; }
+  .status-pending { background: #fef3e2; color: #e67e22; }
+  .status-manual { background: #eef3fd; color: #2d6be4; }
+  .status-flagged { background: #fdecea; color: #e74c3c; }
+
+  .dot { width: 7px; height: 7px; border-radius: 50%; display: inline-block; }
+  .dot-green { background: #27ae60; }
+  .dot-amber { background: #e67e22; }
+  .dot-blue { background: #2d6be4; }
+  .dot-red { background: #e74c3c; }
+
+  .action-btn {
+    padding: 4px 10px; border-radius: 6px; border: 1px solid #e5e7ef;
+    background: #fff; font-size: 11px; cursor: pointer; color: #555; margin-right: 4px;
+  }
+  .action-confirm { color: #27ae60; border-color: #b7ecd0; }
+  .source-chip { display: inline-block; padding: 2px 7px; border-radius: 4px; font-size: 10px; background: #f0f2f8; color: #555; font-weight: 600; }
+
+  .sync-panel {
+    background: var(--bg-0, #fff);
+    border-bottom: 1px solid #e5e7ef;
+    padding: 12px 24px;
+  }
+  .sync-panel-header {
+    display: flex; align-items: center; gap: 10px; margin-bottom: 10px;
+  }
+  .sync-panel-title { font-size: 13px; font-weight: 700; flex: 1; }
+  .sync-panel-toggle { font-size: 11px; color: #2d6be4; cursor: pointer; }
+  .sync-grid { display: flex; gap: 8px; flex-wrap: wrap; }
+  .sync-card {
+    border: 1px solid #e5e7ef; border-radius: 8px; padding: 8px 12px;
+    background: #f7f8fc; display: flex; flex-direction: column; gap: 4px;
+    min-width: 150px; flex: 1;
+  }
+  .sync-card-name { font-size: 12px; font-weight: 700; color: #1a1d2e; }
+  .sync-card-meta { font-size: 10px; color: #888; }
+  .sync-card-status { display: flex; align-items: center; gap: 5px; margin-top: 2px; }
+  .sync-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
+  .sync-dot-green { background: #27ae60; }
+  .sync-dot-amber { background: #e67e22; }
+  .sync-dot-grey { background: #bbb; }
+  .sync-card-btn {
+    margin-top: 5px; font-size: 10px; padding: 3px 8px; border-radius: 5px;
+    border: 1px solid #e5e7ef; background: #fff; cursor: pointer; color: #2d6be4;
+    font-weight: 600; text-align: center;
+  }
+  .sync-card-btn.upload { color: #e67e22; border-color: #f5d08a; }
+  .sync-card.manual { background: #fff8f0; border-color: #f5d08a; }
+</style>
+</head>
+<body>
+
+<div class="app-header">
+  <div>
+    <div class="app-title">🗂️ מיפוי מסגרות גיל הרך — עיריית פונטי פנדה</div>
+    <div class="app-subtitle">כלי עבודה לממונה גיל הרך</div>
+  </div>
+  <div style="display:flex; align-items:center; gap:14px;">
+    <div class="user-badge">שרה לוי — ממונת גיל הרך</div>
+    <img src="https://sfi.org.il/wp-content/uploads/2023/09/%D7%9C%D7%95%D7%92%D7%95-%D7%9E%D7%A2%D7%95%D7%93%D7%9B%D7%9F-2026.png" alt="SFI" style="height:36px; opacity:0.85;">
+  </div>
+</div>
+
+<div class="progress-bar-section">
+  <div class="progress-label">התקדמות המיפוי: <strong>68 מתוך ~117 מסגרות</strong></div>
+  <div class="progress-track"><div class="progress-fill"></div></div>
+  <div class="progress-pct">58%</div>
+  <div style="font-size:12px; color:#888; margin-right: 8px;">⬅ שלב 2: אימות נתונים</div>
+</div>
+
+<div class="sync-panel">
+  <div class="sync-panel-header">
+    <div class="sync-panel-title">🔄 מקורות נתונים ועדכון אוטומטי</div>
+    <span class="sync-panel-toggle">▲ סגור</span>
+  </div>
+  <div class="sync-grid">
+
+    <div class="sync-card">
+      <div class="sync-card-name">משרד החינוך</div>
+      <div class="sync-card-meta">שליפה אוטומטית · שבועי</div>
+      <div class="sync-card-status">
+        <div class="sync-dot sync-dot-green"></div>
+        <span style="font-size:10px; color:#27ae60;">עודכן לפני 3 ימים</span>
+      </div>
+      <div class="sync-card-btn">⟳ עדכן עכשיו</div>
+    </div>
+
+    <div class="sync-card">
+      <div class="sync-card-name">זרוע העבודה</div>
+      <div class="sync-card-meta">שליפה אוטומטית · חודשי</div>
+      <div class="sync-card-status">
+        <div class="sync-dot sync-dot-amber"></div>
+        <span style="font-size:10px; color:#e67e22;">עודכן לפני 32 ימים</span>
+      </div>
+      <div class="sync-card-btn">⟳ עדכן עכשיו</div>
+    </div>
+
+    <div class="sync-card manual">
+      <div class="sync-card-name">ביטוח לאומי *</div>
+      <div class="sync-card-meta">ייבוא ידני · לפי בקשה</div>
+      <div class="sync-card-status">
+        <div class="sync-dot sync-dot-grey"></div>
+        <span style="font-size:10px; color:#888;">לא יובא עדיין</span>
+      </div>
+      <div class="sync-card-btn upload">↑ העלאת קובץ</div>
+    </div>
+
+    <div class="sync-card manual">
+      <div class="sync-card-name">משרד הרווחה **</div>
+      <div class="sync-card-meta">ייבוא ידני · לפי בקשה</div>
+      <div class="sync-card-status">
+        <div class="sync-dot sync-dot-green"></div>
+        <span style="font-size:10px; color:#27ae60;">יובא 18/03/2025</span>
+      </div>
+      <div class="sync-card-btn upload">↑ עדכון קובץ</div>
+    </div>
+
+    <div class="sync-card manual">
+      <div class="sync-card-name">נתוני הרשות</div>
+      <div class="sync-card-meta">ייבוא ידני · Excel</div>
+      <div class="sync-card-status">
+        <div class="sync-dot sync-dot-green"></div>
+        <span style="font-size:10px; color:#27ae60;">יובא 01/04/2025</span>
+      </div>
+      <div class="sync-card-btn upload">↑ עדכון קובץ</div>
+    </div>
+
+    <div class="sync-card manual">
+      <div class="sync-card-name">לידים קהילתיים</div>
+      <div class="sync-card-meta">טופס דיווח · רצוף</div>
+      <div class="sync-card-status">
+        <div class="sync-dot sync-dot-amber"></div>
+        <span style="font-size:10px; color:#e67e22;">27 לידים ממתינים</span>
+      </div>
+      <div class="sync-card-btn">→ מעבר לתור לידים</div>
+    </div>
+
+  </div>
+  <div style="margin-top: 8px; font-size: 10px; color: #aaa; direction: rtl;">
+    * ביטוח לאומי — מקור עקיף, נגישות בבירור &nbsp;|&nbsp; ** משרד הרווחה — שיקומיות בלבד
+  </div>
+</div>
+
+<div class="stat-row">
+  <div class="stat-card green"><div class="num">41</div><div class="lbl">מאומתות ✓</div></div>
+  <div class="stat-card amber"><div class="num">19</div><div class="lbl">ממתינות לאימות</div></div>
+  <div class="stat-card blue"><div class="num">8</div><div class="lbl">נוספו ידנית</div></div>
+  <div class="stat-card red"><div class="num">4</div><div class="lbl">סומנו לבירור</div></div>
+  <div class="stat-card grey"><div class="num">~49</div><div class="lbl">לא אותרו עדיין</div></div>
+</div>
+
+<div class="toolbar">
+  <div class="toolbar-title">רשימת המסגרות</div>
+  <button class="btn-add">+ הוספה ידנית</button>
+</div>
+
+<div class="filter-tabs">
+  <div class="tab active">הכל <span class="cnt">(72)</span></div>
+  <div class="tab">ממתינות לאימות <span class="cnt">(19)</span></div>
+  <div class="tab">מאומתות <span class="cnt">(41)</span></div>
+  <div class="tab">לבירור <span class="cnt">(4)</span></div>
+  <div class="tab">ידניות <span class="cnt">(8)</span></div>
+</div>
+
+<div class="table-wrap">
+  <table>
+    <thead>
+      <tr>
+        <th>שם המסגרת</th>
+        <th>סוג</th>
+        <th>כתובת</th>
+        <th>רישוי</th>
+        <th>מס׳ ילדים</th>
+        <th>פרטי קשר</th>
+        <th>מקור נתון</th>
+        <th>סטטוס אימות</th>
+        <th>פעולות</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>גן ילדים פרחים</strong></td>
+        <td><span class="badge badge-green">מעון עם סמל</span></td>
+        <td>הרצל 12</td>
+        <td><span class="badge badge-green">קבוע</span></td>
+        <td>32</td>
+        <td style="font-size:12px;">רחל כהן<br><span style="color:#888;">054-1234567</span></td>
+        <td><span class="source-chip">חינוך</span></td>
+        <td><span class="status-badge status-confirmed"><span class="dot dot-green"></span>מאומת</span></td>
+        <td><button class="action-btn">עריכה</button></td>
+      </tr>
+      <tr>
+        <td><strong>משפחתון דנה כהן</strong></td>
+        <td><span class="badge badge-amber">משפחתון</span></td>
+        <td>ביאליק 34א</td>
+        <td><span class="badge badge-green">קבוע</span></td>
+        <td>6</td>
+        <td style="font-size:12px;">דנה כהן<br><span style="color:#888;">052-9876543</span></td>
+        <td><span class="source-chip">זרוע עבודה</span></td>
+        <td><span class="status-badge status-pending"><span class="dot dot-amber"></span>לאימות</span></td>
+        <td><button class="action-btn action-confirm">✓ אשרי</button><button class="action-btn">עריכה</button></td>
+      </tr>
+      <tr>
+        <td><strong>גן עדן</strong></td>
+        <td><span class="badge badge-red">פרטי ללא סמל</span></td>
+        <td>רוטשילד 7</td>
+        <td><span class="badge badge-red">ללא רישיון</span></td>
+        <td><span style="color:#aaa;">—</span></td>
+        <td style="font-size:12px; color:#aaa;">לא ידוע</td>
+        <td><span class="source-chip">ביטוח לאומי</span></td>
+        <td><span class="status-badge status-flagged"><span class="dot dot-red"></span>לבירור</span></td>
+        <td><button class="action-btn">עריכה</button></td>
+      </tr>
+      <tr>
+        <td><strong>מעון שיקומי הגשר</strong></td>
+        <td><span class="badge badge-purple">שיקומי</span></td>
+        <td>אלנבי 5</td>
+        <td><span class="badge badge-green">קבוע</span></td>
+        <td>18</td>
+        <td style="font-size:12px;">משרד הרווחה<br><span style="color:#888;">03-5551234</span></td>
+        <td><span class="source-chip">רווחה</span></td>
+        <td><span class="status-badge status-confirmed"><span class="dot dot-green"></span>מאומת</span></td>
+        <td><button class="action-btn">עריכה</button></td>
+      </tr>
+      <tr>
+        <td><strong>גן פרפרים</strong></td>
+        <td><span class="badge badge-amber">משפחתון</span></td>
+        <td>???</td>
+        <td><span class="badge badge-amber">בתהליך</span></td>
+        <td><span style="color:#aaa;">—</span></td>
+        <td style="font-size:12px; color:#aaa;">לא ידוע</td>
+        <td><span class="source-chip">ידני</span></td>
+        <td><span class="status-badge status-manual"><span class="dot dot-blue"></span>ידני — חסר כתובת</span></td>
+        <td><button class="action-btn action-confirm">✓ אשרי</button><button class="action-btn">עריכה</button></td>
+      </tr>
+      <tr>
+        <td><strong>מעון אלומות</strong></td>
+        <td><span class="badge badge-green">מעון עם סמל</span></td>
+        <td>ויצמן 21</td>
+        <td><span class="badge badge-green">קבוע</span></td>
+        <td>45</td>
+        <td style="font-size:12px;">מירי לוי<br><span style="color:#888;">050-3334444</span></td>
+        <td><span class="source-chip">חינוך</span></td>
+        <td><span class="status-badge status-pending"><span class="dot dot-amber"></span>לאימות</span></td>
+        <td><button class="action-btn action-confirm">✓ אשרי</button><button class="action-btn">עריכה</button></td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+</body>
+</html>
