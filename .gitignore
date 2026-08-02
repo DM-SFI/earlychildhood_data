@@ -1,0 +1,13 @@
+.DS_Store
+**/.DS_Store
+~$*
+*.tmp
+
+# סודות — אף פעם לא ל-git
+.env
+.env.local
+*_secret*
+*_key*
+
+# הגדרות מקומיות של Claude
+.claude/

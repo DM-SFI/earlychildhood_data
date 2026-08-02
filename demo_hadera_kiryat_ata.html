@@ -1,0 +1,481 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>מיפוי גיל הרך — חדרה וקריית אתא</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+<style>
+* { box-sizing:border-box; margin:0; padding:0; }
+body { font-family:'Segoe UI',Arial,sans-serif; background:#f0f4f8; color:#1a202c; direction:rtl; }
+header {
+  background:linear-gradient(135deg,#1e3a5f 0%,#2d6a9f 100%);
+  color:white; padding:18px 32px;
+  display:flex; align-items:center; justify-content:space-between;
+}
+header h1 { font-size:1.35rem; font-weight:700; }
+header .sub { font-size:0.8rem; opacity:0.8; margin-top:3px; }
+.live-badge {
+  background:#48bb78; color:white; padding:5px 14px;
+  border-radius:20px; font-size:0.78rem; font-weight:600;
+  display:flex; align-items:center; gap:6px;
+}
+.live-dot { width:8px;height:8px;background:white;border-radius:50%;animation:pulse 1.5s infinite; }
+@keyframes pulse { 0%,100%{opacity:1}50%{opacity:0.3} }
+.main { padding:22px 32px; }
+
+/* City tabs */
+.tabs { display:flex; gap:8px; margin-bottom:20px; }
+.tab {
+  padding:8px 22px; border-radius:8px; font-size:0.88rem; font-weight:600;
+  cursor:pointer; border:2px solid transparent; transition:all 0.15s;
+  background:white; color:#4a5568;
+}
+.tab.active { background:#1e3a5f; color:white; border-color:#1e3a5f; }
+.tab:hover:not(.active) { border-color:#1e3a5f; color:#1e3a5f; }
+
+/* Stats */
+.stats-row { display:grid; grid-template-columns:repeat(5,1fr); gap:14px; margin-bottom:20px; }
+.stat-card {
+  background:white; border-radius:10px; padding:16px 18px;
+  box-shadow:0 1px 3px rgba(0,0,0,0.07); border-top:3px solid #2d6a9f;
+}
+.stat-card.green { border-top-color:#48bb78; }
+.stat-card.orange { border-top-color:#ed8936; }
+.stat-card.red { border-top-color:#e53e3e; }
+.stat-card.purple { border-top-color:#805ad5; }
+.stat-num { font-size:1.8rem; font-weight:700; color:#1e3a5f; }
+.stat-label { font-size:0.78rem; color:#718096; margin-top:3px; }
+
+/* Charts */
+.charts-row { display:grid; grid-template-columns:1fr 1fr 1fr; gap:16px; margin-bottom:20px; }
+.card {
+  background:white; border-radius:10px; padding:18px;
+  box-shadow:0 1px 3px rgba(0,0,0,0.07);
+}
+.card h3 {
+  font-size:0.9rem; font-weight:700; color:#2d3748;
+  margin-bottom:14px; padding-bottom:8px; border-bottom:1px solid #e2e8f0;
+}
+.badge {
+  background:#ebf8ff; color:#2b6cb0; font-size:0.68rem;
+  padding:2px 7px; border-radius:8px; font-weight:600; margin-right:6px;
+}
+
+/* Table */
+.table-card { background:white; border-radius:10px; padding:18px; box-shadow:0 1px 3px rgba(0,0,0,0.07); }
+.filters { display:flex; gap:10px; margin-bottom:12px; flex-wrap:wrap; }
+input[type=text], select {
+  padding:7px 12px; border:1px solid #e2e8f0; border-radius:8px;
+  font-size:0.82rem; color:#2d3748; background:white; direction:rtl;
+}
+input[type=text] { flex:1; min-width:200px; }
+input:focus, select:focus {
+  outline:none; border-color:#2d6a9f;
+  box-shadow:0 0 0 3px rgba(45,106,159,0.1);
+}
+table { width:100%; border-collapse:collapse; font-size:0.8rem; }
+th {
+  background:#f7fafc; color:#4a5568; font-weight:600;
+  padding:9px 10px; text-align:right; border-bottom:2px solid #e2e8f0;
+  white-space:nowrap;
+}
+td { padding:8px 10px; border-bottom:1px solid #f0f4f8; }
+tr:hover td { background:#f7fafc; }
+.tag { display:inline-block; padding:2px 7px; border-radius:8px; font-size:0.7rem; font-weight:600; }
+.tag-green { background:#c6f6d5; color:#276749; }
+.tag-red { background:#fed7d7; color:#9b2335; }
+.tag-orange { background:#feebc8; color:#9c4221; }
+.tag-gray { background:#e2e8f0; color:#4a5568; }
+.tag-blue { background:#bee3f8; color:#2c5282; }
+.src { font-size:0.68rem; background:#e2e8f0; color:#4a5568; padding:1px 5px; border-radius:4px; margin-left:2px; }
+.city-pill-h { background:#ebf8ff; color:#2b6cb0; padding:2px 8px; border-radius:8px; font-size:0.72rem; font-weight:600; }
+.city-pill-k { background:#fef3c7; color:#92400e; padding:2px 8px; border-radius:8px; font-size:0.72rem; font-weight:600; }
+.gap-row { margin-bottom:8px; }
+.gap-label { font-size:0.78rem; color:#4a5568; margin-bottom:3px; display:flex; justify-content:space-between; }
+.gap-bg { background:#e2e8f0; border-radius:4px; height:7px; }
+.gap-fill { height:7px; border-radius:4px; }
+.footer { text-align:center; color:#a0aec0; font-size:0.72rem; margin-top:18px; padding-bottom:20px; }
+</style>
+</head>
+<body>
+<header>
+  <div>
+    <h1>🗺️ מיפוי מסגרות גיל הרך — חדרה &#38; קריית אתא</h1>
+    <div class="sub">כרייה חיה מ-API מפת הטף (הסדנא לידע ציבורי) · 26.05.2026 · SFI — אסטרטגיית נתונים לגיל הרך</div>
+  </div>
+  <div class="live-badge"><div class="live-dot"></div>נתונים אמיתיים</div>
+</header>
+
+<div class="main">
+
+<div class="tabs">
+  <div class="tab active" onclick="setCity('all')">שתי הערים (151)</div>
+  <div class="tab" onclick="setCity('חדרה')">חדרה (97)</div>
+  <div class="tab" onclick="setCity('קריית אתא')">קריית אתא (54)</div>
+</div>
+
+<div class="stats-row" id="statsRow"></div>
+
+<div class="charts-row">
+  <div class="card">
+    <h3>סטטוס רישוי</h3>
+    <canvas id="licenseChart" height="200"></canvas>
+  </div>
+  <div class="card">
+    <h3>השוואה בין הערים</h3>
+    <canvas id="compareChart" height="200"></canvas>
+  </div>
+  <div class="card">
+    <h3>כיסוי מקורות — מה SFI מוסיפה</h3>
+    <div style="margin-top:8px">
+      <div class="gap-row">
+        <div class="gap-label"><span>מפת הטף: מסגרות מפוקחות</span><span style="color:#48bb78;font-weight:700">✓</span></div>
+        <div class="gap-bg"><div class="gap-fill" style="width:90%;background:#48bb78"></div></div>
+      </div>
+      <div class="gap-row">
+        <div class="gap-label"><span>מסגרות ללא סמל רשמי</span><span style="color:#ed8936">~חלקי</span></div>
+        <div class="gap-bg"><div class="gap-fill" style="width:40%;background:#ed8936"></div></div>
+      </div>
+      <div class="gap-row" style="margin-top:16px">
+        <div class="gap-label"><span style="font-weight:600;color:#1e3a5f">SFI מוסיפה — שכבת הרשות:</span></div>
+      </div>
+      <div class="gap-row">
+        <div class="gap-label"><span>פרטי קשר ממונה + הערות פנימיות</span><span style="color:#2d6a9f">→ בונים</span></div>
+        <div class="gap-bg"><div class="gap-fill" style="width:0%;background:#2d6a9f"></div></div>
+      </div>
+      <div class="gap-row">
+        <div class="gap-label"><span>סטטוס ביקורים ותיאומים</span><span style="color:#2d6a9f">→ בונים</span></div>
+        <div class="gap-bg"><div class="gap-fill" style="width:0%;background:#2d6a9f"></div></div>
+      </div>
+      <div class="gap-row">
+        <div class="gap-label"><span>לידים לאימות ועדכון</span><span style="color:#2d6a9f">→ בונים</span></div>
+        <div class="gap-bg"><div class="gap-fill" style="width:0%;background:#2d6a9f"></div></div>
+      </div>
+      <div style="background:#ebf8ff;border-radius:8px;padding:10px;font-size:0.78rem;color:#2c5282;margin-top:14px;line-height:1.6">
+        💡 SFI יושבת <strong>מעל</strong> מפת הטף — לא בונה את מה שקיים.
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="table-card">
+  <h3 style="font-size:0.9rem;font-weight:700;color:#2d3748;margin-bottom:12px;padding-bottom:8px;border-bottom:1px solid #e2e8f0">
+    כל המסגרות <span class="badge" id="tableCountBadge">151</span>
+  </h3>
+  <div class="filters">
+    <input type="text" id="searchInput" placeholder="🔍  חיפוש לפי שם, כתובת, מנהלת..." oninput="renderTable()">
+    <select id="licFilter" onchange="renderTable()">
+      <option value="">כל הסטטוסים</option>
+      <option>רישיון בתוקף</option>
+      <option>לא הוגשה בקשה לרישוי</option>
+      <option>בתהליך רישוי</option>
+      <option>לא ידוע</option>
+    </select>
+    <select id="srcFilter" onchange="renderTable()">
+      <option value="">כל המקורות</option>
+      <option value="חינוך">משרד החינוך</option>
+      <option value="עבודה">משרד העבודה</option>
+      <option value="רווחה">משרד הרווחה</option>
+    </select>
+  </div>
+  <div style="overflow-x:auto">
+    <table>
+      <thead>
+        <tr>
+          <th>עיר</th>
+          <th>שם מסגרת</th>
+          <th>כתובת</th>
+          <th>מנהלת</th>
+          <th>טלפון</th>
+          <th>רישוי</th>
+          <th>מקורות</th>
+          <th>מקומות פנויים</th>
+        </tr>
+      </thead>
+      <tbody id="tbody"></tbody>
+    </table>
+  </div>
+  <div id="tableFooter" style="font-size:0.72rem;color:#a0aec0;margin-top:8px;text-align:left"></div>
+</div>
+
+</div>
+
+<!-- ══ LEADS SECTION ══════════════════════════════════════════════════ -->
+<div class="table-card" style="margin-top:20px;border-top:3px solid #ed8936">
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;padding-bottom:8px;border-bottom:1px solid #e2e8f0">
+    <h3 style="font-size:0.9rem;font-weight:700;color:#2d3748">
+      🔍 מסגרות ללא סמל רשמי — לידים לאימות
+      <span class="badge" id="leadsCountBadge" style="background:#ed8936">46</span>
+    </h3>
+    <span style="font-size:0.72rem;color:#a0aec0">מקור: Google Places API + דפי זהב + B144 | לא נמצאו במפת הטף</span>
+  </div>
+
+  <div style="background:#fffaf0;border:1px solid #fbd38d;border-radius:8px;padding:10px 14px;margin-bottom:12px;font-size:0.78rem;color:#744210;line-height:1.6">
+    ⚠️ <strong>לתשומת לב:</strong> אלו <em>לידים בלבד</em> — לא מסגרות מאומתות. חלקן עשויות להיות מסגרות לגילאי 3+ או מחוץ לתחום. נדרש אימות ידני ע"י הממונה.
+    <span style="margin-right:12px">🟢 = בתוך העיר</span><span>⬜ = עיר סמוכה</span>
+  </div>
+
+  <div class="filters">
+    <input type="text" id="leadsSearch" placeholder="🔍  חיפוש לפי שם / כתובת..." oninput="renderLeads()">
+    <select id="leadsCityFilter" onchange="renderLeads()">
+      <option value="">שתי הערים</option>
+      <option value="חדרה">חדרה</option>
+      <option value="קריית אתא">קריית אתא</option>
+    </select>
+    <select id="leadsLocFilter" onchange="renderLeads()">
+      <option value="">כל המיקומים</option>
+      <option value="✓">בתוך העיר</option>
+      <option value="סמוכה">עיר סמוכה</option>
+    </select>
+    <select id="leadsSrcFilter" onchange="renderLeads()">
+      <option value="">כל המקורות</option>
+      <option value="Google Places">Google Places</option>
+      <option value="דפי זהב">דפי זהב</option>
+      <option value="B144">B144</option>
+      <option value="לוח נט">לוח נט</option>
+    </select>
+  </div>
+
+  <div style="overflow-x:auto">
+    <table>
+      <thead>
+        <tr>
+          <th>עיר</th>
+          <th>שם מסגרת</th>
+          <th>כתובת</th>
+          <th>מקור כרייה</th>
+          <th>מיקום</th>
+          <th>דירוג</th>
+          <th>לינק</th>
+        </tr>
+      </thead>
+      <tbody id="leadsTbody"></tbody>
+    </table>
+  </div>
+  <div id="leadsFooter" style="font-size:0.72rem;color:#a0aec0;margin-top:8px;text-align:left"></div>
+</div>
+
+<div class="footer">
+  נתונים: מפת הטף — הסדנא לידע ציבורי | רישיון ODbL | כרייה: 26.05.2026 | סה"כ שורות במאגר: 8,178<br>
+  מסמך זה הוא הדגמה פנימית בלבד · SFI — אסטרטגיית נתונים לגיל הרך
+</div>
+
+<script>
+const ALL = [{"id": "moe-53629", "name": "אפרוחים", "city": "חדרה", "address": "הגושרים 1, חדרה, ישראל", "manager": "דיין רומי", "phone": "04-695-6489", "license": "רישיון בתוקף", "sources": ["חינוך", "עבודה"], "available": 10, "total": 46, "type": "מעון", "sector": "יהודי", "lat": "32.4202637", "lng": "34.9539918"}, {"id": "moe-53314", "name": "בית תינוקות", "city": "חדרה", "address": "חולתה 1, חדרה", "manager": "שדה נעמה", "phone": "04-691-5150", "license": "רישיון בתוקף", "sources": ["חינוך", "עבודה"], "available": 13, "total": 54, "type": "מעון", "sector": "יהודי", "lat": "32.44420096663222", "lng": "34.90210683533483"}, {"id": "moe-93633", "name": "בראשית", "city": "קריית אתא", "address": "מרדכי אנילביץ' 7, קרית אתא, ישראל", "manager": "מוסקוביץ שירן", "phone": "050-640-9070", "license": "רישיון בתוקף", "sources": ["חינוך", "עבודה", "רווחה"], "available": 46, "total": 76, "type": "מעון", "sector": "יהודי", "lat": "32.8081688", "lng": "35.1235617"}, {"id": "moe-50187", "name": "גבעת טל", "city": "קריית אתא", "address": "ואן גוך 56, קרית אתא", "manager": "דרעי יפית", "phone": "04-848-1342", "license": "רישיון בתוקף", "sources": ["חינוך", "עבודה"], "available": 7, "total": 77, "type": "מעון", "sector": "יהודי", "lat": "", "lng": ""}, {"id": "moe-50195", "name": "moe-50195", "city": "קריית אתא", "address": "צבי הרר 33, קרית אתא", "manager": "—", "phone": "—", "license": "לא ידוע", "sources": [], "available": null, "total": null, "type": "מעון", "sector": "—", "lat": "32.80312121345622", "lng": "35.1325190823886"}, {"id": "moe-50344", "name": "דובדבן חדרה שועלי שמשון", "city": "חדרה", "address": "מבצע נחשון 8, חדרה, ישראל", "manager": "אשתר אפרת", "phone": "04-994-9484", "license": "רישיון בתוקף", "sources": ["חינוך", "עבודה"], "available": 2, "total": 77, "type": "מעון", "sector": "יהודי", "lat": "32.4431033", "lng": "34.899448"}, {"id": "moe-50203", "name": "דובדבן חדרה בית אליעזר", "city": "חדרה", "address": "מילנר 11, חדרה", "manager": "גולדשטין אורטל מרים", "phone": "04-620-2556", "license": "רישיון בתוקף", "sources": ["חינוך", "עבודה"], "available": 42, "total": 107, "type": "מעון", "sector": "יהודי", "lat": "32.417395328654095", "lng": "34.94830306524761"}, {"id": "moe-54577", "name": "הנסיכים", "city": "חדרה", "address": "אלי כהן 36, חדרה", "manager": "ארביב נצחיה", "phone": "04-886-2703", "license": "רישיון בתוקף", "sources": ["חינוך", "עבודה"], "available": 76, "total": 76, "type": "מעון", "sector": "יהודי", "lat": "32.4351111706505", "lng": "34.8837738009032"}, {"id": "moe-52357", "name": "הציונות", "city": "קריית אתא", "address": "שדרות הציונות 22, קרית אתא", "manager": "בוחבוט מיכאל", "phone": "052-532-3085", "license": "רישיון בתוקף", "sources": ["חינוך", "עבודה"], "available": 18, "total": 62, "type": "מעון", "sector": "יהודי", "lat": "32.80546680593897", "lng": "35.10752224930562"}, {"id": "moe-51268", "name": "הרקפות", "city": "קריית אתא", "address": "בן-עמי 13, קרית אתא", "manager": "דגן מורן", "phone": "04-844-2060", "license": "רישיון בתוקף", "sources": ["חינוך", "עבודה"], "available": 55, "total": 77, "type": "מעון", "sector": "יהודי", "lat": "32.81107914795034", "lng": "35.125828429535794"}, {"id": "moe-50757", "name": "וולדנברג ר\"ת- פשוש", "city": "קריית אתא", "address": "הס 19, קרית אתא", "manager": "סבג גולן פנינה", "phone": "04-845-6433", "license": "רישיון בתוקף", "sources": ["חינוך", "עבודה"], "available": 58, "total": 76, "type": "מעון", "sector": "יהודי", "lat": "32.81005282735713", "lng": "35.11479938643391"}, {"id": "moe-52233", "name": "חנקין קרית אתא", "city": "קריית אתא", "address": "חנקין 14, קרית אתא", "manager": "מלקאר רוית", "phone": "052-333-0432", "license": "רישיון בתוקף", "sources": ["חינוך", "עבודה"], "available": 10, "total": 53, "type": "מעון", "sector": "יהודי", "lat": "32.811923376627774", "lng": "35.10810252315991"}, {"id": "moe-50781", "name": "יוספטל -סיגלון", "city": "חדרה", "address": "הנריטה סאלד 3, חדרה", "manager": "סרף סיון", "phone": "04-632-6802", "license": "רישיון בתוקף", "sources": ["חינוך", "עבודה"], "available": 0, "total": 77, "type": "מעון", "sector": "יהודי", "lat": "32.43473781730012", "lng": "34.92789170846812"}, {"id": "moe-69153", "name": "מעון שמחה", "city": "קריית אתא", "address": "בר-אילן 6, קרית אתא", "manager": "מויאל אורלי", "phone": "04-982-0373", "license": "רישיון בתוקף", "sources": ["חינוך", "עבודה"], "available": 5, "total": 37, "type": "מעון", "sector": "יהודי", "lat": "32.80477990220013", "lng": "35.09463591214124"}, {"id": "moe-68098", "name": "סביון", "city": "חדרה", "address": "האפרסמון 2, חדרה, ישראל", "manager": "שררה אורנה", "phone": "04-842-8566", "license": "רישיון בתוקף", "sources": ["חינוך", "עבודה", "רווחה"], "available": 0, "total": 77, "type": "מעון", "sector": "יהודי", "lat": "32.429419", "lng": "34.926894"}, {"id": "moe-54684", "name": "moe-54684", "city": "קריית אתא", "address": "המיסדים 13, קרית אתא", "manager": "—", "phone": "—", "license": "לא ידוע", "sources": [], "available": null, "total": null, "type": "מעון", "sector": "—", "lat": "32.804266044202166", "lng": "35.10559103439911"}, {"id": "moe-84616", "name": "אגדה של גן", "city": "חדרה", "address": "אהרונוביץ 5, חדרה", "manager": "שמשי אודליה", "phone": "052-472-3703", "license": "רישיון בתוקף", "sources": ["חינוך"], "available": null, "total": null, "type": "מעון", "sector": "יהודי", "lat": "32.447678259146976", "lng": "34.904445469977844"}, {"id": "moe-11091", "name": "אגם המשאלות", "city": "חדרה", "address": "השיטה 50, חדרה", "manager": "כהן מיטל", "phone": "052-427-3576", "license": "לא הוגשה בקשה לרישוי", "sources": ["חינוך"], "available": null, "total": null, "type": "מעון", "sector": "יהודי", "lat": "32.42715441540287", "lng": "34.91990881660624"}, {"id": "moe-51334", "name": "moe-51334", "city": "חדרה", "address": "הנצי\"ב 2, חדרה", "manager": "—", "phone": "—", "license": "לא ידוע", "sources": [], "available": null, "total": null, "type": "מעון", "sector": "—", "lat": "32.438323408308335", "lng": "34.906645683089145"}, {"id": "moe-51169", "name": "שכונת משכנות פאר", "city": "חדרה", "address": "מיכאל חזני 5, חדרה", "manager": "גברילוב רונית", "phone": "04-633-1223", "license": "רישיון בתוקף", "sources": ["חינוך", "עבודה"], "available": 0, "total": 92, "type": "מעון", "sector": "יהודי", "lat": "32.429212004140865", "lng": "34.916648835752106"}, {"id": "moe-54585", "name": "תהילה", "city": "חדרה", "address": "העליה השניה 10, חדרה", "manager": "ביטון טלי", "phone": "04-633-3063", "license": "רישיון בתוקף", "sources": ["חינוך", "עבודה", "רווחה"], "available": 81, "total": 81, "type": "מעון", "sector": "יהודי", "lat": "32.440798215220596", "lng": "34.92009991239663"}, {"id": "moe-74849", "name": "moe-74849", "city": "קריית אתא", "address": "הצנחנים 24, קרית אתא", "manager": "—", "phone": "—", "license": "לא ידוע", "sources": [], "available": null, "total": null, "type": "מעון", "sector": "—", "lat": "32.811864845559576", "lng": "35.114263677793396"}, {"id": "moe-10982", "name": "בא מאהבה", "city": "חדרה", "address": "האשור 6, חדרה", "manager": "אוחיון כהן חן", "phone": "054-220-9356", "license": "רישיון בתוקף", "sources": ["חינוך"], "available": null, "total": null, "type": "מעון", "sector": "יהודי", "lat": "32.43794238105873", "lng": "34.92943441055664"}, {"id": "moe-11631", "name": "בדרך אל האושר", "city": "חדרה", "address": "הגיבורים 135, חדרה", "manager": "לוי נטלי", "phone": "052-748-8067", "license": "רישיון בתוקף", "sources": ["חינוך"], "available": null, "total": null, "type": "מעון", "sector": "יהודי", "lat": "32.4441728472566", "lng": "34.92507674898051"}, {"id": "moe-51185", "name": "ביח הלל יפה", "city": "חדרה", "address": "הלל יפה 1, חדרה, ישראל", "manager": "רוימי סמדר רות", "phone": "04-633-4640", "license": "רישיון בתוקף", "sources": ["חינוך"], "available": null, "total": null, "type": "מעון", "sector": "יהודי", "lat": "32.4332201", "lng": "34.9155917"}, {"id": "moe-95521", "name": "בייבי פנאי", "city": "חדרה", "address": "השיזף 4, חדרה, ישראל", "manager": "פריד מימון פזית", "phone": "04-843-5564", "license": "רישיון בתוקף", "sources": ["חינוך"], "available": null, "total": null, "type": "מעון", "sector": "יהודי", "lat": "32.4216467", "lng": "34.9486753"}, {"id": "moe-10191", "name": "גו רינה", "city": "חדרה", "address": "סמילנסקי 6, חדרה", "manager": "קלז רינה", "phone": "054-426-8589", "license": "רישיון בתוקף", "sources": ["חינוך"], "available": null, "total": null, "type": "מעון", "sector": "יהודי", "lat": "32.434317841395526", "lng": "34.91358094303714"}, {"id": "moe-75689", "name": "גן אילנה שלום בע\"מ", "city": "קריית אתא", "address": "זלמן שניאור 13, קרית אתא", "manager": "מולה מטיקה אורית", "phone": "04-444323", "license": "רישיון בתוקף", "sources": ["חינוך"], "available": null, "total": null, "type": "מעון", "sector": "יהודי", "lat": "32.80028037962979", "lng": "35.094556030631615"}, {"id": "moe-74096", "name": "גן איריס בן הרוש בע\"מ", "city": "קריית אתא", "address": "זבולון 14, קרית אתא", "manager": "בן הרוש איריס", "phone": "052-516-4120", "license": "רישיון בתוקף", "sources": ["חינוך"], "available": null, "total": null, "type": "מעון", "sector": "יהודי", "lat": "32.80523707735312", "lng": "35.10210925534771"}, {"id": "moe-10127", "name": "גן בית חם", "city": "חדרה", "address": "פינברג 14, חדרה", "manager": "הרוש שרה", "phone": "054-441-3817", "license": "רישיון בתוקף", "sources": ["חינוך"], "available": null, "total": null, "type": "מעון", "sector": "יהודי", "lat": "32.4282664420249", "lng": "34.91720471852572"}, {"id": "moe-75424", "name": "גן גחליליות קריית אתא", "city": "קריית אתא", "address": "אסף שמחוני 22, קרית אתא", "manager": "נייס אהרון", "phone": "050-878-7431", "license": "רישיון בתוקף", "sources": ["חינוך"], "available": null, "total": null, "type": "מעון", "sector": "יהודי", "lat": "32.81182968625936", "lng": "35.11553437123212"}, {"id": "moe-82065", "name": "גן- דניאל", "city": "חדרה", "address": "ד\"ר דן ויליאם 22, חדרה", "manager": "מלכה אילנה חנה", "phone": "052-438-0535", "license": "רישיון בתוקף", "sources": ["חינוך"], "available": null, "total": null, "type": "מעון", "sector": "יהודי", "lat": "32.43377249872217", "lng": "34.8857137341432"}, {"id": "moe-11701", "name": "גן האוצרות", "city": "חדרה", "address": "טרומפלדור 26, חדרה", "manager": "—", "phone": "052-712-2731", "license": "בתהליך רישוי", "sources": ["חינוך"], "available": null, "total": null, "type": "מעון", "sector": "יהודי", "lat": "32.436534207786245", "lng": "34.92876878797718"}, {"id": "moe-86041", "name": "גן החלומות", "city": "חדרה", "address": "הגדוד העברי 24, חדרה", "manager": "בוארון אירינה", "phone": "050-740-3931", "license": "רישיון בתוקף", "sources": ["חינוך"], "available": null, "total": null, "type": "מעון", "sector": "יהודי", "lat": "32.44244144473717", "lng": "34.89058548994496"}, {"id": "moe-10397", "name": "גן החלומות של צילי וגילי", "city": "חדרה", "address": "אוסישקין 34, חדרה", "manager": "משיח מושקוביץ מרים", "phone": "05-454-5378", "license": "רישיון בתוקף", "sources": ["חינוך"], "available": null, "total": null, "type": "מעון", "sector": "יהודי", "lat": "32.44724507252304", "lng": "34.90429802149253"}, {"id": "moe-83618", "name": "גן החלומות של תותי", "city": "חדרה", "address": "האתרוג 19, חדרה", "manager": "סויסה אורטל", "phone": "054-586-7141", "license": "רישיון בתוקף", "sources": ["חינוך"], "available": null, "total": null, "type": "מעון", "sector": "יהודי", "lat": "32.42427975618909", "lng": "34.9247872253486"}, {"id": "moe-10145", "name": "גן המתוק", "city": "קריית אתא", "address": "ירושלים 3, קרית אתא", "manager": "פריד רחל", "phone": "04-710-1145", "license": "רישיון בתוקף", "sources": ["חינוך"], "available": null, "total": null, "type": "מעון", "sector": "יהודי", "lat": "32.80409487404328", "lng": "35.10578340747897"}, {"id": "moe-83238", "name": "גן הציונות", "city": "קריית אתא", "address": "שדרות הציונות 36, קרית אתא", "manager": "יטח רחל", "phone": "052-529-7299", "license": "לא הוגשה בקשה לרישוי", "sources": ["חינוך"], "available": null, "total": null, "type": "מעון", "sector": "יהודי", "lat": "32.804368301751424", "lng": "35.1095627298277"}, {"id": "moe-88823", "name": "גן חיוכים", "city": "קריית אתא", "address": "הרצל 22, קרית אתא", "manager": "פלייר קמר אנה", "phone": "052-618-3379", "license": "רישיון בתוקף", "sources": ["חינוך"], "available": null, "total": null, "type": "מעון", "sector": "יהודי", "lat": "32.80774939871958", "lng": "35.109228142328746"}, {"id": "moe-97097", "name": "גן חלומותיי", "city": "קריית אתא", "address": "משה שרת 90, קרית אתא", "manager": "נחמני בת שבע", "phone": "050-381-0116", "license": "רישיון בתוקף", "sources": ["חינוך"], "available": null, "total": null, "type": "מעון", "sector": "יהודי", "lat": "32.793703767390085", "lng": "35.0909023767517"}, {"id": "moe-83899", "name": "גן חלומי", "city": "חדרה", "address": "עין עבדת 18, חדרה", "manager": "אוטמזגין איריס", "phone": "052-330-9042", "license": "רישיון בתוקף", "sources": ["חינוך"], "available": null, "total": null, "type": "מעון", "sector": "יהודי", "lat": "32.42756730088765", "lng": "34.93971537061566"}, {"id": "moe-11130", "name": "גן חנה", "city": "קריית אתא", "address": "בעל שם-טוב 6, קרית אתא", "manager": "וקסמן חנה", "phone": "052-525-6390", "license": "רישיון בתוקף", "sources": ["חינוך"], "available": null, "total": null, "type": "מעון", "sector": "יהודי", "lat": "32.8006153155298", "lng": "35.107036394868025"}, {"id": "moe-11512", "name": "גן יאר", "city": "חדרה", "address": "היסמין 28, חדרה", "manager": "אטל קרין דזירה", "phone": "055-500-4883", "license": "רישיון בתוקף", "sources": ["חינוך"], "available": null, "total": null, "type": "מעון", "sector": "יהודי", "lat": "32.43062703537369", "lng": "34.91242320534326"}, {"id": "moe-90191", "name": "גן ילדים לוגוס", "city": "חדרה", "address": "הגיבורים 108, חדרה", "manager": "קירייבה אינה", "phone": "054-933-1384", "license": "רישיון בתוקף", "sources": ["חינוך"], "available": null, "total": null, "type": "מעון", "sector": "יהודי", "lat": "32.44120507523661", "lng": "34.92460737957618"}, {"id": "moe-10617", "name": "גן כיף לי", "city": "קריית אתא", "address": "שלום עליכם 14, קרית אתא", "manager": "נחמיאס הלן", "phone": "050-586-5365", "license": "רישיון בתוקף", "sources": ["חינוך"], "available": null, "total": null, "type": "מעון", "sector": "יהודי", "lat": "32.806454615032436", "lng": "35.10241749811806"}, {"id": "moe-10768", "name": "גן עליזה", "city": "חדרה", "address": "תרע\"ב 2, חדרה", "manager": "ברוך עליזה", "phone": "054-775-1769", "license": "רישיון בתוקף", "sources": ["חינוך"], "available": null, "total": null, "type": "מעון", "sector": "יהודי", "lat": "32.44286535447437", "lng": "34.92509141566686"}, {"id": "moe-97261", "name": "גן עלמה", "city": "חדרה", "address": "קיבוץ גלויות 8, חדרה", "manager": "עימנילוב חיבה", "phone": "050-893-0070", "license": "רישיון בתוקף", "sources": ["חינוך"], "available": null, "total": null, "type": "מעון", "sector": "יהודי", "lat": "32.42542890216589", "lng": "34.95228862629237"}, {"id": "moe-94045", "name": "moe-94045", "city": "חדרה", "address": "כ\"ט בנובמבר 8, חדרה", "manager": "—", "phone": "—", "license": "לא ידוע", "sources": [], "available": null, "total": null, "type": "מעון", "sector": "—", "lat": "32.42813758930841", "lng": "34.94510428336235"}, {"id": "moe-10634", "name": "גן קסם", "city": "חדרה", "address": "הבריגדה היהודית 14, חדרה", "manager": "בר-לב חני אפרת", "phone": "052-833-2157", "license": "רישיון בתוקף", "sources": ["חינוך"], "available": null, "total": null, "type": "מעון", "sector": "יהודי", "lat": "32.442211147924816", "lng": "34.88864027774114"}, {"id": "moe-86363", "name": "moe-86363", "city": "חדרה", "address": "הרצל 71, חדרה", "manager": "—", "phone": "—", "license": "לא ידוע", "sources": [], "available": null, "total": null, "type": "מעון", "sector": "—", "lat": "32.4419985305754", "lng": "34.92054276937213"}, {"id": "moe-11142", "name": "גן-אופגן", "city": "חדרה", "address": "הרב דוד משתה 24, חדרה", "manager": "אופגנג יפית", "phone": "052-717-6893", "license": "רישיון בתוקף", "sources": ["חינוך"], "available": null, "total": null, "type": "מעון", "sector": "יהודי", "lat": "32.44302075864602", "lng": "34.88786117083677"}, {"id": "moe-85795", "name": "גנון פינוקי", "city": "קריית אתא", "address": "בן עמי 1, קרית אתא, ישראל", "manager": "גבאי סיון", "phone": "054-225-1511", "license": "רישיון בתוקף", "sources": ["חינוך"], "available": null, "total": null, "type": "מעון", "sector": "יהודי", "lat": "32.8102194", "lng": "35.125357"}, {"id": "moe-10941", "name": "גנון קידה", "city": "חדרה", "address": "הקידה 6, חדרה, ישראל", "manager": "יעקב חוה הודיה", "phone": "052-459-0763", "license": "רישיון בתוקף", "sources": ["חינוך"], "available": null, "total": null, "type": "מעון", "sector": "יהודי", "lat": "32.4188776", "lng": "34.9488646"}, {"id": "moe-10115", "name": "גנון שושי", "city": "קריית אתא", "address": "ירושלים 4, קרית אתא", "manager": "לייבוביץ אסתר", "phone": "054-715-0577", "license": "רישיון בתוקף", "sources": ["חינוך"], "available": null, "total": null, "type": "מעון", "sector": "יהודי", "lat": "32.803680246455265", "lng": "35.105976048135894"}, {"id": "moe-10772", "name": "גן-לי", "city": "חדרה", "address": "נורדאו 8, חדרה", "manager": "זיני לאה", "phone": "052-335-2744", "license": "רישיון בתוקף", "sources": ["חינוך"], "available": null, "total": null, "type": "מעון", "sector": "יהודי", "lat": "32.42886725979529", "lng": "34.91970142388032"}, {"id": "moe-10819", "name": "האפרוחים של לולי", "city": "חדרה", "address": "הגיבורים 120, חדרה", "manager": "סבוני זוהר", "phone": "050-960-3050", "license": "רישיון בתוקף", "sources": ["חינוך"], "available": null, "total": null, "type": "מעון", "sector": "יהודי", "lat": "32.443226166573176", "lng": "34.9251434732402"}, {"id": "moe-10198", "name": "האפרוחים של קורל", "city": "קריית אתא", "address": "משה שרת 79, קרית אתא", "manager": "בן אליהו קורל", "phone": "054-530-2742", "license": "רישיון בתוקף", "sources": ["חינוך"], "available": null, "total": null, "type": "מעון", "sector": "יהודי", "lat": "32.794687163883104", "lng": "35.09150964492579"}, {"id": "moe-84319", "name": "הבית של מעיין", "city": "חדרה", "address": "האלון 43, חדרה", "manager": "שגב מעין", "phone": "052-227-1788", "license": "רישיון בתוקף", "sources": ["חינוך"], "available": null, "total": null, "type": "מעון", "sector": "יהודי", "lat": "32.4264613008753", "lng": "34.92045322958701"}, {"id": "moe-11405", "name": "הבית של סיגי", "city": "קריית אתא", "address": "כינרת 49, קרית אתא", "manager": "גרימבלט סיגלית", "phone": "052-609-0444", "license": "רישיון בתוקף", "sources": ["חינוך"], "available": null, "total": null, "type": "מעון", "sector": "יהודי", "lat": "32.79672775139724", "lng": "35.10542855757091"}, {"id": "moe-94284", "name": "הגן הקסום", "city": "חדרה", "address": "משמר הים 12, חדרה, ישראל", "manager": "אטיאס קטי", "phone": "050-734-0759", "license": "רישיון בתוקף", "sources": ["חינוך"], "available": null, "total": null, "type": "מעון", "sector": "יהודי", "lat": "32.4403001", "lng": "34.8828239"}, {"id": "moe-92189", "name": "הגן הקסום", "city": "חדרה", "address": "ביאליק 47, חדרה", "manager": "דדון אסתר", "phone": "055-664-3679", "license": "רישיון בתוקף", "sources": ["חינוך"], "available": null, "total": null, "type": "מעון", "sector": "יהודי", "lat": "32.43243505434698", "lng": "34.918329214954696"}, {"id": "moe-11410", "name": "הגן של אולסיה", "city": "חדרה", "address": "הגיתית 27, חדרה", "manager": "זבלוייב אולסיה", "phone": "054-666-0834", "license": "רישיון בתוקף", "sources": ["חינוך"], "available": null, "total": null, "type": "מעון", "sector": "יהודי", "lat": "32.42995605951618", "lng": "34.91473262147946"}, {"id": "moe-93963", "name": "הגן של גל", "city": "חדרה", "address": "קיבוץ גלויות 3, חדרה", "manager": "יצחק אבדייב זולייט גל", "phone": "050-657-0234", "license": "רישיון בתוקף", "sources": ["חינוך"], "available": null, "total": null, "type": "מעון", "sector": "יהודי", "lat": "32.42628378607794", "lng": "34.951403784549136"}, {"id": "moe-10300", "name": "הגן של חן", "city": "חדרה", "address": "הר הנגב 16, חדרה", "manager": "עזורה חן חנה", "phone": "054-351-9076", "license": "רישיון בתוקף", "sources": ["חינוך"], "available": null, "total": null, "type": "מעון", "sector": "יהודי", "lat": "32.429123667655766", "lng": "34.951098147968345"}, {"id": "moe-11072", "name": "הגן של חן", "city": "חדרה", "address": "מלכי ישראל 1, חדרה", "manager": "מוסקט חן", "phone": "054-253-3460", "license": "רישיון בתוקף", "sources": ["חינוך"], "available": null, "total": null, "type": "מעון", "sector": "יהודי", "lat": "32.43411294391407", "lng": "34.888413314413334"}, {"id": "moe-89987", "name": "הגן של טל", "city": "חדרה", "address": "סמילנסקי 6, חדרה", "manager": "לוי טל", "phone": "054-525-5581", "license": "רישיון בתוקף", "sources": ["חינוך"], "available": null, "total": null, "type": "מעון", "sector": "יהודי", "lat": "32.434317841395526", "lng": "34.91358094303714"}, {"id": "moe-88856", "name": "הגן של מורן", "city": "קריית אתא", "address": "גיבורי הקריה 4, קרית אתא", "manager": "נחום אבני מורן", "phone": "054-322-6386", "license": "לא הוגשה בקשה לרישוי", "sources": ["חינוך"], "available": null, "total": null, "type": "מעון", "sector": "יהודי", "lat": "32.80315811973817", "lng": "35.09608994455362"}, {"id": "moe-10575", "name": "הגן של ניני", "city": "קריית אתא", "address": "מנדלי מוכר ספרים 34, קרית אתא", "manager": "רחמים אורנית הלה", "phone": "054-497-5050", "license": "רישיון בתוקף", "sources": ["חינוך"], "available": null, "total": null, "type": "מעון", "sector": "יהודי", "lat": "32.808382230221156", "lng": "35.09998085306083"}, {"id": "moe-88062", "name": "הגן של קארין", "city": "חדרה", "address": "הגיבורים 106, חדרה", "manager": "חנגיו קרין", "phone": "052-808-9839", "license": "רישיון בתוקף", "sources": ["חינוך"], "available": null, "total": null, "type": "מעון", "sector": "יהודי", "lat": "32.440952423855414", "lng": "34.924533723446636"}, {"id": "moe-10748", "name": "הגן של רחלי", "city": "קריית אתא", "address": "מוצקין 7, קרית אתא", "manager": "אלגרבלי רגב רחל קלי", "phone": "052-215-1836", "license": "רישיון בתוקף", "sources": ["חינוך"], "available": null, "total": null, "type": "מעון", "sector": "יהודי", "lat": "32.81139159977141", "lng": "35.10839139584677"}, {"id": "moe-11311", "name": "הגן של שירן", "city": "חדרה", "address": "התאנים 13, חדרה", "manager": "אביטן פורטנוי שירן", "phone": "054-522-7848", "license": "רישיון בתוקף", "sources": ["חינוך"], "available": null, "total": null, "type": "מעון", "sector": "יהודי", "lat": "32.4195021649787", "lng": "34.95115693138007"}, {"id": "moe-48462", "name": "הגן של שני", "city": "חדרה", "address": "מורדי הגטאות 37, חדרה", "manager": "קליימן שני", "phone": "050-203-0991", "license": "רישיון בתוקף", "sources": ["חינוך"], "available": null, "total": null, "type": "מעון", "sector": "יהודי", "lat": "32.42388939192804", "lng": "34.94903957519617"}, {"id": "moe-10594", "name": "הגן שלנו מתנ\"ס גבעת אולגה", "city": "חדרה", "address": "הראשונים 11, חדרה, ישראל", "manager": "כראדי דיקלה", "phone": "04-633-0825", "license": "רישיון בתוקף", "sources": ["חינוך"], "available": null, "total": null, "type": "מעון", "sector": "יהודי", "lat": "32.4425987", "lng": "34.8866684"}, {"id": "moe-10580", "name": "החממה של טלי", "city": "חדרה", "address": "הרימונים 7, חדרה", "manager": "רבייב טלי תהילה", "phone": "054-645-9946", "license": "רישיון בתוקף", "sources": ["חינוך"], "available": null, "total": null, "type": "מעון", "sector": "יהודי", "lat": "32.43098201358067", "lng": "34.94702065144274"}, {"id": "moe-86561", "name": "החופש לבחור חינוך לגיל הרך בגי", "city": "חדרה", "address": "הרי בשמים 5, חדרה", "manager": "כלפון שני", "phone": "052-312-4429", "license": "רישיון בתוקף", "sources": ["חינוך"], "available": null, "total": null, "type": "מעון", "sector": "יהודי", "lat": "32.427573649980445", "lng": "34.88418323250526"}, {"id": "moe-83691", "name": "החינוך הקיבוצי", "city": "חדרה", "address": "רש\"י 13, חדרה", "manager": "קורן יעל", "phone": "054-592-8922", "license": "רישיון בתוקף", "sources": ["חינוך"], "available": null, "total": null, "type": "מעון", "sector": "יהודי", "lat": "32.43130259781298", "lng": "34.91210204843799"}, {"id": "moe-79277", "name": "הילדים של קמי", "city": "קריית אתא", "address": "המיסדים 20, קרית אתא", "manager": "בניטון קמילה", "phone": "053-339-8415", "license": "רישיון בתוקף", "sources": ["חינוך"], "available": null, "total": null, "type": "מעון", "sector": "יהודי", "lat": "32.80324646261206", "lng": "35.10474869761091"}, {"id": "moe-87916", "name": "הממלכה הקסומה", "city": "קריית אתא", "address": "משה הס 20, קרית אתא, ישראל", "manager": "כהן דוד", "phone": "052-664-1826", "license": "רישיון בתוקף", "sources": ["חינוך"], "available": null, "total": null, "type": "מעון", "sector": "יהודי", "lat": "32.8098765", "lng": "35.11477420000001"}, {"id": "moe-91637", "name": "המשפחתון של אורטל", "city": "חדרה", "address": "בארי 3, חדרה", "manager": "אלמקיאס אורטל", "phone": "050-576-4885", "license": "רישיון בתוקף", "sources": ["חינוך"], "available": null, "total": null, "type": "מעון", "sector": "יהודי", "lat": "32.45346735814058", "lng": "34.90441565476597"}, {"id": "moe-83857", "name": "המשפחתון של אורלי", "city": "חדרה", "address": "כ\"ט בנובמבר 44, חדרה", "manager": "יצחק אורלי", "phone": "052-528-4941", "license": "רישיון בתוקף", "sources": ["חינוך"], "available": null, "total": null, "type": "מעון", "sector": "יהודי", "lat": "32.428538754104736", "lng": "34.951705827249484"}, {"id": "moe-84335", "name": "המשפחתון של אילנה", "city": "חדרה", "address": "שדרות רוטשילד 78, חדרה", "manager": "צחובר אילנה", "phone": "050-727-7720", "license": "רישיון בתוקף", "sources": ["חינוך"], "available": null, "total": null, "type": "מעון", "sector": "יהודי", "lat": "32.44171484554738", "lng": "34.92271297213411"}, {"id": "moe-96255", "name": "המשפחתון של גליה", "city": "חדרה", "address": "הזית 2, חדרה", "manager": "גרובר גלינה", "phone": "04-633-9144", "license": "לא הוגשה בקשה לרישוי", "sources": ["חינוך"], "available": null, "total": null, "type": "מעון", "sector": "יהודי", "lat": "32.42141693412917", "lng": "34.91885304382322"}, {"id": "moe-26930", "name": "המשפחתון של מדלן", "city": "חדרה", "address": "הטיסים 11, חדרה", "manager": "ברנשטיין מדלן", "phone": "050-250-1743", "license": "רישיון בתוקף", "sources": ["חינוך"], "available": null, "total": null, "type": "מעון", "sector": "יהודי", "lat": "32.44621102169041", "lng": "34.92114636156949"}, {"id": "moe-73395", "name": "המשפחתון של מיכל", "city": "חדרה", "address": "מבצע עובדה 15, חדרה", "manager": "בן אבו מרל", "phone": "052-452-2025", "license": "רישיון בתוקף", "sources": ["חינוך"], "available": null, "total": null, "type": "מעון", "sector": "יהודי", "lat": "32.44400240762845", "lng": "34.89830047231859"}, {"id": "moe-10721", "name": "המשפחתון של עדי", "city": "קריית אתא", "address": "נורדאו 78, קרית אתא, ישראל", "manager": "לוי גרבויס עדי", "phone": "053-739-1026", "license": "רישיון בתוקף", "sources": ["חינוך"], "available": null, "total": null, "type": "מעון", "sector": "יהודי", "lat": "32.8130089", "lng": "35.1109953"}, {"id": "moe-10480", "name": "המשפחתון של רחל", "city": "חדרה", "address": "טביב 3, חדרה", "manager": "אסרף רחל הילה", "phone": "055-292-3111", "license": "רישיון בתוקף", "sources": ["חינוך"], "available": null, "total": null, "type": "מעון", "sector": "יהודי", "lat": "32.446393164390315", "lng": "34.92599509671976"}, {"id": "moe-10107", "name": "moe-10107", "city": "חדרה", "address": "הגיבורים 125, חדרה, ישראל", "manager": "—", "phone": "—", "license": "לא ידוע", "sources": [], "available": null, "total": null, "type": "מעון", "sector": "—", "lat": "32.443367", "lng": "34.924613"}, {"id": "moe-10119", "name": "moe-10119", "city": "חדרה", "address": "הגיבורים 133, חדרה", "manager": "—", "phone": "—", "license": "לא ידוע", "sources": [], "available": null, "total": null, "type": "מעון", "sector": "—", "lat": "32.44416238958932", "lng": "34.924428096313115"}, {"id": "moe-79269", "name": "הפעוטון של ניצה", "city": "חדרה", "address": "ער אציל 9, חדרה", "manager": "לנמן ניצה", "phone": "052-298-7072", "license": "לא הוגשה בקשה לרישוי", "sources": ["חינוך"], "available": null, "total": null, "type": "מעון", "sector": "יהודי", "lat": "32.424844254182304", "lng": "34.923169433214134"}, {"id": "moe-89789", "name": "הקטנטנים של נטלי", "city": "חדרה", "address": "ער אציל 9, חדרה", "manager": "מאיה לוגסי נטלי", "phone": "052-345-2310", "license": "רישיון בתוקף", "sources": ["חינוך"], "available": null, "total": null, "type": "מעון", "sector": "יהודי", "lat": "32.424844254182304", "lng": "34.923169433214134"}, {"id": "moe-74997", "name": "הקטנטנים של רחלי", "city": "קריית אתא", "address": "שלום סלח 16, קרית אתא", "manager": "אסרף רחל", "phone": "052-281-4405", "license": "רישיון בתוקף", "sources": ["חינוך"], "available": null, "total": null, "type": "מעון", "sector": "יהודי", "lat": "32.80138620025294", "lng": "35.101323601425484"}, {"id": "moe-88948", "name": "חנה נחמני", "city": "קריית אתא", "address": "נוף הכרמל 16, קרית אתא", "manager": "נחמני חנה", "phone": "052-666-1436", "license": "רישיון בתוקף", "sources": ["חינוך"], "available": null, "total": null, "type": "מעון", "sector": "יהודי", "lat": "32.7970060006525", "lng": "35.10382684562862"}, {"id": "moe-86785", "name": "ילדים זה ברכה", "city": "חדרה", "address": "מבצע חירם 5, חדרה, ישראל", "manager": "ואקיל ברכה", "phone": "052-455-8689", "license": "רישיון בתוקף", "sources": ["חינוך"], "available": null, "total": null, "type": "מעון", "sector": "יהודי", "lat": "32.4437283", "lng": "34.8974803"}, {"id": "moe-10722", "name": "לונה גן", "city": "קריית אתא", "address": "שפרינצק 95, קרית אתא", "manager": "אגמון ליאור", "phone": "052-838-8601", "license": "רישיון בתוקף", "sources": ["חינוך"], "available": null, "total": null, "type": "מעון", "sector": "יהודי", "lat": "32.79317102019387", "lng": "35.09008103509543"}, {"id": "moe-10591", "name": "ממלכת הקטנטנים של מאיה", "city": "חדרה", "address": "כ\"ט בנובמבר 3, חדרה", "manager": "תורגמן מאיה", "phone": "054-456-3375", "license": "רישיון בתוקף", "sources": ["חינוך"], "available": null, "total": null, "type": "מעון", "sector": "יהודי", "lat": "32.427224574026134", "lng": "34.944011779408385"}, {"id": "moe-10744", "name": "מעון הזיתים", "city": "חדרה", "address": "דוד אלעזר 2, חדרה, ישראל", "manager": "ריבניק אניה", "phone": "04-621-0870", "license": "לא הוגשה בקשה לרישוי", "sources": ["חינוך"], "available": null, "total": null, "type": "מעון", "sector": "יהודי", "lat": "32.4407678", "lng": "34.9069816"}, {"id": "moe-95539", "name": "מעון חב\"ד", "city": "חדרה", "address": "טרומפלדור 7, חדרה, 38280, ישראל", "manager": "וועקסלשטיין מיכל בלומה", "phone": "052-770-7438", "license": "רישיון בתוקף", "sources": ["חינוך"], "available": null, "total": null, "type": "מעון", "sector": "יהודי", "lat": "32.437061", "lng": "34.9283011"}, {"id": "moe-11319", "name": "מעון מאקאווא", "city": "קריית אתא", "address": "ירושלים 3, קרית אתא", "manager": "—", "phone": "054-715-0577", "license": "לא הוגשה בקשה לרישוי", "sources": ["חינוך"], "available": null, "total": null, "type": "מעון", "sector": "יהודי", "lat": "32.80409487404328", "lng": "35.10578340747897"}, {"id": "moe-95463", "name": "מעון מנחם", "city": "חדרה", "address": "ארלוזורוב 10, חדרה", "manager": "חיון דבורה", "phone": "058-487-7010", "license": "רישיון בתוקף", "sources": ["חינוך"], "available": null, "total": null, "type": "מעון", "sector": "יהודי", "lat": "32.437398267302704", "lng": "34.928032455191165"}, {"id": "moe-89383", "name": "משפחתון \"אוקטופוס\"", "city": "חדרה", "address": "יצחק רבין 18, חדרה", "manager": "גוכשטט ויקטוריה", "phone": "054-430-8555", "license": "רישיון בתוקף", "sources": ["חינוך"], "available": null, "total": null, "type": "מעון", "sector": "יהודי", "lat": "32.42750570834709", "lng": "34.92375657840349"}, {"id": "moe-10947", "name": "משפחתון גמדים", "city": "חדרה", "address": "הרימונים 13, חדרה", "manager": "קוקמן ילנה", "phone": "050-726-8999", "license": "רישיון בתוקף", "sources": ["חינוך"], "available": null, "total": null, "type": "מעון", "sector": "יהודי", "lat": "32.43102025102093", "lng": "34.94808380730933"}, {"id": "moe-81786", "name": "משפחתון גן נועה", "city": "קריית אתא", "address": "אליהו הנביא 2, קרית אתא", "manager": "אלגרסי סיגלית", "phone": "054-941-4726", "license": "רישיון בתוקף", "sources": ["חינוך"], "available": null, "total": null, "type": "מעון", "sector": "יהודי", "lat": "32.80189420269349", "lng": "35.105102534521606"}, {"id": "moe-81992", "name": "משפחתון האהבה של יוכי", "city": "חדרה", "address": "ברנדיס 18, חדרה", "manager": "יצחק יוכבד", "phone": "052-892-9348", "license": "רישיון בתוקף", "sources": ["חינוך"], "available": null, "total": null, "type": "מעון", "sector": "יהודי", "lat": "32.42257851395247", "lng": "34.92211329914447"}, {"id": "moe-76604", "name": "moe-76604", "city": "קריית אתא", "address": "שדרות בורוכוב 50, קרית אתא", "manager": "—", "phone": "—", "license": "לא ידוע", "sources": [], "available": null, "total": null, "type": "מעון", "sector": "—", "lat": "32.80675029124951", "lng": "35.11158886617013"}, {"id": "moe-80903", "name": "משפחתון קשת", "city": "חדרה", "address": "דורשי ציון 5, חדרה", "manager": "חרפקין ויטלי", "phone": "054-810-4484", "license": "רישיון בתוקף", "sources": ["חינוך"], "available": null, "total": null, "type": "מעון", "sector": "יהודי", "lat": "32.44644100520189", "lng": "34.89990866361095"}, {"id": "moe-88799", "name": "משפחתון קשת בענן", "city": "חדרה", "address": "גוש חלב 4, חדרה", "manager": "קמלט רויטל", "phone": "052-562-0527", "license": "רישיון בתוקף", "sources": ["חינוך"], "available": null, "total": null, "type": "מעון", "sector": "יהודי", "lat": "32.42958360064283", "lng": "34.925504500116126"}, {"id": "moe-86660", "name": "משפחתון שבלולים שובבים", "city": "קריית אתא", "address": "הגליל 7, קרית אתא", "manager": "גולן רחל", "phone": "050-667-8290", "license": "רישיון בתוקף", "sources": ["חינוך"], "available": null, "total": null, "type": "מעון", "sector": "יהודי", "lat": "32.80580572472385", "lng": "35.11462213786411"}, {"id": "moe-77719", "name": "נחשונים", "city": "חדרה", "address": "נחשונים 1, חדרה, ישראל", "manager": "טהר-לב מיכל", "phone": "052-234-5959", "license": "רישיון בתוקף", "sources": ["חינוך"], "available": null, "total": null, "type": "מעון", "sector": "יהודי", "lat": "32.4425713", "lng": "34.9226838"}, {"id": "moe-89920", "name": "עננים", "city": "חדרה", "address": "הירדן 4, חדרה", "manager": "רדניץ אמיר", "phone": "054-440-2855", "license": "לא הוגשה בקשה לרישוי", "sources": ["חינוך"], "available": null, "total": null, "type": "מעון", "sector": "יהודי", "lat": "32.43058726180098", "lng": "34.930860234627474"}, {"id": "moe-11229", "name": "פו הדב", "city": "חדרה", "address": "שקצר 29, חדרה", "manager": "אירמייב מזל", "phone": "052-487-7521", "license": "רישיון בתוקף", "sources": ["חינוך"], "available": null, "total": null, "type": "מעון", "sector": "יהודי", "lat": "32.41454252460879", "lng": "34.95113889333332"}, {"id": "moe-78048", "name": "פינוקי טף", "city": "קריית אתא", "address": "דוד רזיאל 1, קרית אתא", "manager": "ממן תמר", "phone": "053-467-5737", "license": "רישיון בתוקף", "sources": ["חינוך"], "available": null, "total": null, "type": "מעון", "sector": "יהודי", "lat": "32.796923949891216", "lng": "35.09215805508699"}, {"id": "moe-11194", "name": "פעוטון בית גן", "city": "קריית אתא", "address": "בית וגן 1, קרית אתא, ישראל", "manager": "בן אלישע נופר", "phone": "04-670-8211", "license": "רישיון בתוקף", "sources": ["חינוך"], "available": null, "total": null, "type": "מעון", "sector": "יהודי", "lat": "32.7994918", "lng": "35.1043128"}, {"id": "moe-82057", "name": "פעוטון גנית", "city": "קריית אתא", "address": "הרצל 64, קרית אתא", "manager": "פדאל גנית", "phone": "052-348-8833", "license": "לא הוגשה בקשה לרישוי", "sources": ["חינוך"], "available": null, "total": null, "type": "מעון", "sector": "יהודי", "lat": "32.81149266907031", "lng": "35.11087920450642"}, {"id": "moe-79806", "name": "פעוטון מאיה", "city": "חדרה", "address": "ביאליק 82, חדרה", "manager": "סאיג מאיה", "phone": "052-693-0055", "license": "רישיון בתוקף", "sources": ["חינוך"], "available": null, "total": null, "type": "מעון", "sector": "יהודי", "lat": "32.43055424365973", "lng": "34.92404484881163"}, {"id": "moe-80655", "name": "פעוטון מיכל", "city": "קריית אתא", "address": "המיסדים 31, קרית אתא", "manager": "אברהם עוזי (עזיז)", "phone": "050-744-2753", "license": "רישיון בתוקף", "sources": ["חינוך"], "available": null, "total": null, "type": "מעון", "sector": "יהודי", "lat": "32.80190356599369", "lng": "35.105540265114485"}, {"id": "moe-14928", "name": "פעוטון מעיין גנים", "city": "חדרה", "address": "ארלוזורוב 28, חדרה", "manager": "שיטרית אפרת קורין", "phone": "073-248-1089", "license": "רישיון בתוקף", "sources": ["חינוך"], "available": null, "total": null, "type": "מעון", "sector": "יהודי", "lat": "32.436896830616135", "lng": "34.92965025081884"}, {"id": "moe-96370", "name": "פעוטון צעד צעד - ליאורה נעמן", "city": "חדרה", "address": "האחו 11, חדרה", "manager": "נעמן ליאורה", "phone": "054-461-7049", "license": "רישיון בתוקף", "sources": ["חינוך"], "available": null, "total": null, "type": "מעון", "sector": "יהודי", "lat": "32.45409208090725", "lng": "34.90170157375187"}, {"id": "moe-75135", "name": "פעוטון של אנה", "city": "חדרה", "address": "האגוז 4, חדרה", "manager": "מטייב אנה", "phone": "054-300-0562", "license": "רישיון בתוקף", "sources": ["חינוך"], "available": null, "total": null, "type": "מעון", "sector": "יהודי", "lat": "32.43750254618131", "lng": "34.930360851392734"}, {"id": "moe-15016", "name": "קטנטנים", "city": "חדרה", "address": "העליה השניה 11, חדרה", "manager": "אשיטו שרה", "phone": "050-680-0037", "license": "רישיון בתוקף", "sources": ["חינוך"], "available": null, "total": null, "type": "מעון", "sector": "יהודי", "lat": "32.44087219957644", "lng": "34.92091848207783"}, {"id": "moe-11414", "name": "קיבוץ קסום בעיר (ע\"ר)", "city": "חדרה", "address": "השקד 3, חדרה", "manager": "קפלן איריס", "phone": "052-434-3179", "license": "רישיון בתוקף", "sources": ["חינוך"], "available": null, "total": null, "type": "מעון", "sector": "יהודי", "lat": "32.41950341539215", "lng": "34.91805109423733"}, {"id": "moe-76638", "name": "קרן שפע", "city": "חדרה", "address": "צידקוב 7, חדרה", "manager": "יעקב קרן-חנה", "phone": "050-828-0062", "license": "רישיון בתוקף", "sources": ["חינוך"], "available": null, "total": null, "type": "מעון", "sector": "יהודי", "lat": "32.44408679764992", "lng": "34.903383315784914"}, {"id": "welfare-207389", "name": "welfare-207389", "city": "חדרה", "address": "—", "manager": "—", "phone": "—", "license": "לא ידוע", "sources": [], "available": null, "total": null, "type": "מעון", "sector": "—", "lat": "32.43904691111588", "lng": "34.885408072184966"}, {"id": "welfare-216531", "name": "מועדונית נווה חן", "city": "קריית אתא", "address": "האסיף 2, קרית אתא", "manager": "עדנה שמש", "phone": "—", "license": "לא ידוע", "sources": ["רווחה"], "available": null, "total": null, "type": "מועדונית", "sector": "—", "lat": "32.80425776436244", "lng": "35.085678644013676"}, {"id": "welfare-825009", "name": "רשת דובדבן-חדרה", "city": "חדרה", "address": "מילנר 11, חדרה", "manager": "—", "phone": "—", "license": "לא ידוע", "sources": ["רווחה"], "available": null, "total": null, "type": "מעון יום", "sector": "—", "lat": "32.417395328654095", "lng": "34.94830306524761"}, {"id": "welfare-207190", "name": "בינה קידום לעתיד בעמ", "city": "קריית אתא", "address": "שד הציונות 22, קרית אתא", "manager": "—", "phone": "—", "license": "לא ידוע", "sources": ["רווחה"], "available": null, "total": null, "type": "מעון יום", "sector": "—", "lat": "32.80546680593897", "lng": "35.10752224930562"}, {"id": "welfare-245138", "name": "מעון נעמת ק אתא", "city": "קריית אתא", "address": "הס 19, קרית אתא", "manager": "—", "phone": "—", "license": "לא ידוע", "sources": ["רווחה"], "available": null, "total": null, "type": "מעון יום", "sector": "—", "lat": "32.81005282735713", "lng": "35.11479938643391"}, {"id": "welfare-208483", "name": "welfare-208483", "city": "חדרה", "address": "—", "manager": "—", "phone": "—", "license": "לא ידוע", "sources": [], "available": null, "total": null, "type": "מעון", "sector": "—", "lat": "32.436430316533915", "lng": "34.92256990672512"}, {"id": "welfare-211846", "name": "welfare-211846", "city": "חדרה", "address": "—", "manager": "—", "phone": "—", "license": "לא ידוע", "sources": [], "available": null, "total": null, "type": "מעון", "sector": "—", "lat": "32.43625256142787", "lng": "34.88582197527772"}, {"id": "welfare-201737", "name": "מעון ק.אתא-נעמת רב ת", "city": "קריית אתא", "address": "הס 19, קרית אתא", "manager": "—", "phone": "—", "license": "לא ידוע", "sources": ["רווחה"], "available": null, "total": null, "type": "מעון רב תכליתי", "sector": "—", "lat": "32.81005282735713", "lng": "35.11479938643391"}, {"id": "welfare-219937", "name": "מוגנות קיץ", "city": "קריית אתא", "address": "פינסקר 11, קרית אתא", "manager": "עדנה שמש דידי", "phone": "04-847-8900", "license": "לא ידוע", "sources": ["רווחה"], "available": null, "total": null, "type": "מועדונית", "sector": "—", "lat": "32.80762116265133", "lng": "35.10663369664074"}, {"id": "welfare-216530", "name": "מועדונית הרצגוג בי\"ס", "city": "קריית אתא", "address": "הרצוג 22, קרית אתא", "manager": "—", "phone": "—", "license": "לא ידוע", "sources": ["רווחה"], "available": null, "total": null, "type": "מועדונית", "sector": "—", "lat": "32.81135182396855", "lng": "35.12936252220357"}, {"id": "welfare-220797", "name": "מועדונית טיפולית ניצ", "city": "חדרה", "address": "הרב ניסים 2, חדרה", "manager": "חיותה מלכה", "phone": "—", "license": "לא ידוע", "sources": ["רווחה"], "available": null, "total": null, "type": "מועדונית", "sector": "—", "lat": "32.43847685345647", "lng": "34.888206689111314"}, {"id": "welfare-206025", "name": "welfare-206025", "city": "חדרה", "address": "—", "manager": "—", "phone": "—", "license": "לא ידוע", "sources": [], "available": null, "total": null, "type": "מעון", "sector": "—", "lat": "32.4328931506248", "lng": "34.91754093737243"}, {"id": "welfare-211155", "name": "א.ד.נ.מ בעמ-מ.סיעודי", "city": "קריית אתא", "address": "שרת משה 3, קרית אתא", "manager": "דרורי טל", "phone": "050-524-9612", "license": "לא ידוע", "sources": ["רווחה"], "available": null, "total": null, "type": "מעון יום", "sector": "—", "lat": "32.80301831833515", "lng": "35.09095460149589"}, {"id": "welfare-255053", "name": "מעון תאדל סלע חדרה", "city": "חדרה", "address": "א.מ שכון גזית 2, חדרה", "manager": "—", "phone": "—", "license": "לא ידוע", "sources": ["רווחה"], "available": null, "total": null, "type": "מעון יום", "sector": "—", "lat": "32.437764579467085", "lng": "34.91448435220068"}, {"id": "welfare-205302", "name": "אדרת אליהו-מעון נסיכ", "city": "חדרה", "address": "א.מ הראושנים 1, חדרה", "manager": "—", "phone": "—", "license": "לא ידוע", "sources": ["רווחה"], "available": null, "total": null, "type": "מעון יום", "sector": "—", "lat": "32.437764579467085", "lng": "34.91448435220068"}, {"id": "welfare-205311", "name": "רשת דובדבן-קרית אתא", "city": "קריית אתא", "address": "א.מ הרר צבי 33, קרית אתא", "manager": "—", "phone": "—", "license": "לא ידוע", "sources": ["רווחה"], "available": null, "total": null, "type": "מעון יום", "sector": "—", "lat": "32.80593372814598", "lng": "35.10502330329089"}, {"id": "welfare-201070", "name": "welfare-201070", "city": "קריית אתא", "address": "—", "manager": "—", "phone": "—", "license": "לא ידוע", "sources": [], "available": null, "total": null, "type": "מעון", "sector": "—", "lat": "32.81123748046067", "lng": "35.10731311124538"}, {"id": "welfare-265210", "name": "מעון ויצו קרית אתא", "city": "קריית אתא", "address": "בן עמי 7, קרית אתא", "manager": "—", "phone": "—", "license": "לא ידוע", "sources": ["רווחה"], "available": null, "total": null, "type": "מעון יום", "sector": "—", "lat": "32.81029409576179", "lng": "35.12491084550298"}, {"id": "welfare-245029", "name": "מעון נעמת נוה חיים", "city": "חדרה", "address": "א.מ שכ נוה חיים 1, חדרה", "manager": "—", "phone": "—", "license": "לא ידוע", "sources": ["רווחה"], "available": null, "total": null, "type": "מעון יום", "sector": "—", "lat": "32.437764579467085", "lng": "34.91448435220068"}, {"id": "welfare-265054", "name": "מעון ויצו חדרה", "city": "חדרה", "address": "א.מ בי\"ח הלל יפה 1, חדרה", "manager": "—", "phone": "—", "license": "לא ידוע", "sources": ["רווחה"], "available": null, "total": null, "type": "מעון יום", "sector": "—", "lat": "32.437764579467085", "lng": "34.91448435220068"}, {"id": "welfare-208040", "name": "מעון רב תכליתי-ויצו", "city": "חדרה", "address": "חזני מיכאל 3, חדרה", "manager": "חיותה מנהלת מחלקה", "phone": "04-633-1223", "license": "לא ידוע", "sources": ["רווחה"], "available": null, "total": null, "type": "מעון רב תכליתי", "sector": "—", "lat": "32.42917518137315", "lng": "34.916319347773516"}, {"id": "welfare-201071", "name": "welfare-201071", "city": "קריית אתא", "address": "—", "manager": "—", "phone": "—", "license": "לא ידוע", "sources": [], "available": null, "total": null, "type": "מעון", "sector": "—", "lat": "32.79834956861738", "lng": "35.0932132059075"}, {"id": "welfare-205675", "name": "welfare-205675", "city": "חדרה", "address": "—", "manager": "—", "phone": "—", "license": "לא ידוע", "sources": [], "available": null, "total": null, "type": "מעון", "sector": "—", "lat": "32.437557748397566", "lng": "34.92268336648432"}, {"id": "welfare-203887", "name": "א.דנ.מ.בעמ-תעסוקה", "city": "קריית אתא", "address": "שפרינצק 6, קרית אתא", "manager": "—", "phone": "04-843-8946", "license": "לא ידוע", "sources": ["רווחה"], "available": null, "total": null, "type": "מעון יום", "sector": "—", "lat": "32.802637880997565", "lng": "35.08906530966139"}, {"id": "welfare-211599", "name": "אלווין קרית אתא", "city": "קריית אתא", "address": "חפץ חיים 12, קרית אתא", "manager": "קרן מירית", "phone": "—", "license": "לא ידוע", "sources": ["רווחה"], "available": null, "total": null, "type": "מעון יום", "sector": "—", "lat": "32.80990849580739", "lng": "35.102904721298344"}, {"id": "welfare-221326", "name": "מרכז הורים וילדים", "city": "חדרה", "address": "גרינבוים יצחק 1, חדרה", "manager": "אילנה פרימוביץ", "phone": "—", "license": "לא ידוע", "sources": ["רווחה"], "available": null, "total": null, "type": "מרכז הורים ילדים", "sector": "—", "lat": "32.44311083823848", "lng": "34.90251456786816"}, {"id": "welfare-205292", "name": "welfare-205292", "city": "קריית אתא", "address": "—", "manager": "—", "phone": "—", "license": "לא ידוע", "sources": [], "available": null, "total": null, "type": "מעון", "sector": "—", "lat": "32.809882058557506", "lng": "35.12935307993745"}, {"id": "welfare-265053", "name": "מעון ויצו חדרה", "city": "חדרה", "address": "הלל יפה 1, חדרה", "manager": "—", "phone": "—", "license": "לא ידוע", "sources": ["רווחה"], "available": null, "total": null, "type": "מעון יום", "sector": "—", "lat": "32.4334106869132", "lng": "34.91514689318524"}, {"id": "welfare-211845", "name": "welfare-211845", "city": "חדרה", "address": "—", "manager": "—", "phone": "—", "license": "לא ידוע", "sources": [], "available": null, "total": null, "type": "מעון", "sector": "—", "lat": "32.43526114744905", "lng": "34.91597036914276"}, {"id": "welfare-213338", "name": "מעון דובדבן", "city": "חדרה", "address": "א.מ מבצע נחשון 8, חדרה", "manager": "—", "phone": "—", "license": "לא ידוע", "sources": ["רווחה"], "available": null, "total": null, "type": "מעון יום", "sector": "—", "lat": "32.437764579467085", "lng": "34.91448435220068"}];
+
+let currentCity = 'all';
+
+function setCity(c) {
+  currentCity = c;
+  document.querySelectorAll('.tab').forEach((t,i) => {
+    t.classList.toggle('active', 
+      (c==='all'&&i===0)||(c==='חדרה'&&i===1)||(c==='קריית אתא'&&i===2));
+  });
+  updateAll();
+}
+
+function filtered() {
+  if (currentCity === 'all') return ALL;
+  return ALL.filter(f => f.city === currentCity);
+}
+
+function tableFiltered() {
+  const q = document.getElementById('searchInput').value.toLowerCase();
+  const lic = document.getElementById('licFilter').value;
+  const src = document.getElementById('srcFilter').value;
+  return filtered().filter(f =>
+    (!q || f.name.toLowerCase().includes(q) || (f.address||'').toLowerCase().includes(q) || (f.manager||'').toLowerCase().includes(q)) &&
+    (!lic || f.license === lic) &&
+    (!src || f.sources.includes(src))
+  );
+}
+
+let licChart, cmpChart;
+
+function updateAll() {
+  updateStats();
+  updateCharts();
+  renderTable();
+}
+
+function updateStats() {
+  const data = filtered();
+  const valid = data.filter(f => f.license === 'רישיון בתוקף').length;
+  const noLic = data.filter(f => f.license === 'לא הוגשה בקשה לרישוי').length;
+  const avail = data.reduce((s,f) => s + (f.available||0), 0);
+  const multiSrc = data.filter(f => f.sources.length > 1).length;
+  document.getElementById('statsRow').innerHTML = `
+    <div class="stat-card"><div class="stat-num">${data.length}</div><div class="stat-label">מסגרות סה"כ</div></div>
+    <div class="stat-card green"><div class="stat-num">${valid}</div><div class="stat-label">עם רישיון בתוקף</div><div style="font-size:0.72rem;color:#a0aec0">${Math.round(valid/data.length*100)}% מהמסגרות</div></div>
+    <div class="stat-card red"><div class="stat-num">${noLic}</div><div class="stat-label">ללא בקשת רישוי</div><div style="font-size:0.72rem;color:#a0aec0">דורש בירור</div></div>
+    <div class="stat-card orange"><div class="stat-num">${avail}</div><div class="stat-label">מקומות פנויים</div><div style="font-size:0.72rem;color:#a0aec0">ממקור משרד העבודה</div></div>
+    <div class="stat-card purple"><div class="stat-num">${multiSrc}</div><div class="stat-label">מוצלבות ממקורות</div><div style="font-size:0.72rem;color:#a0aec0">מ-2+ מקורות</div></div>
+  `;
+}
+
+function updateCharts() {
+  const data = filtered();
+  const licCounts = {};
+  data.forEach(f => { licCounts[f.license] = (licCounts[f.license]||0)+1; });
+
+  const licColors = {
+    'רישיון בתוקף': '#48bb78',
+    'לא הוגשה בקשה לרישוי': '#e53e3e',
+    'בתהליך רישוי': '#ed8936',
+    'לא ידוע': '#a0aec0'
+  };
+
+  if (licChart) licChart.destroy();
+  licChart = new Chart(document.getElementById('licenseChart'), {
+    type: 'doughnut',
+    data: {
+      labels: Object.keys(licCounts),
+      datasets: [{ data: Object.values(licCounts), backgroundColor: Object.keys(licCounts).map(k => licColors[k]||'#cbd5e0'), borderWidth:2, borderColor:'#fff' }]
+    },
+    options: { plugins: { legend: { position:'bottom', labels:{ font:{size:10}, padding:8 } } }, cutout:'62%' }
+  });
+
+  // Compare chart (always show both cities)
+  const hData = ALL.filter(f=>f.city==='חדרה');
+  const kData = ALL.filter(f=>f.city==='קריית אתא');
+  const cats = ['סה"כ מסגרות','עם רישיון','ללא רישוי','מקומות פנויים'];
+  const hVals = [hData.length, hData.filter(f=>f.license==='רישיון בתוקף').length, hData.filter(f=>f.license==='לא הוגשה בקשה לרישוי').length, Math.round(hData.reduce((s,f)=>s+(f.available||0),0)/10)];
+  const kVals = [kData.length, kData.filter(f=>f.license==='רישיון בתוקף').length, kData.filter(f=>f.license==='לא הוגשה בקשה לרישוי').length, Math.round(kData.reduce((s,f)=>s+(f.available||0),0)/10)];
+
+  if (cmpChart) cmpChart.destroy();
+  cmpChart = new Chart(document.getElementById('compareChart'), {
+    type:'bar',
+    data:{
+      labels: cats,
+      datasets:[
+        {label:'חדרה', data:hVals, backgroundColor:'rgba(45,106,159,0.8)', borderRadius:4},
+        {label:'קריית אתא', data:kVals, backgroundColor:'rgba(237,137,54,0.8)', borderRadius:4}
+      ]
+    },
+    options:{
+      plugins:{legend:{position:'bottom',labels:{font:{size:10},padding:8}}},
+      scales:{y:{beginAtZero:true,ticks:{font:{size:10}}},x:{ticks:{font:{size:10}}}},
+      responsive:true
+    }
+  });
+}
+
+function renderTable() {
+  const data = tableFiltered();
+  document.getElementById('tableCountBadge').textContent = data.length;
+  document.getElementById('tableFooter').textContent = `מוצגות ${data.length} מתוך ${filtered().length} מסגרות`;
+
+  const licTag = (l) => {
+    if (l === 'רישיון בתוקף') return `<span class="tag tag-green">✓ רישיון</span>`;
+    if (l === 'לא הוגשה בקשה לרישוי') return `<span class="tag tag-red">⚠ ללא רישוי</span>`;
+    if (l === 'בתהליך רישוי') return `<span class="tag tag-orange">↻ בתהליך</span>`;
+    return `<span class="tag tag-gray">? לא ידוע</span>`;
+  };
+
+  document.getElementById('tbody').innerHTML = data.map(f => `
+    <tr>
+      <td><span class="${f.city==='חדרה'?'city-pill-h':'city-pill-k'}">${f.city}</span></td>
+      <td><strong>${f.name}</strong></td>
+      <td style="color:#718096;font-size:0.75rem;max-width:180px">${(f.address||'—').substring(0,45)}</td>
+      <td style="white-space:nowrap">${f.manager||'—'}</td>
+      <td style="direction:ltr;text-align:right;color:#718096;white-space:nowrap">${f.phone||'—'}</td>
+      <td>${licTag(f.license)}</td>
+      <td>${f.sources.map(s=>`<span class="src">${s}</span>`).join('')}</td>
+      <td>${f.available===null||f.available===undefined?'—': f.available===0?'<span style="color:#e53e3e">0</span>':`<span style="color:#276749">${f.available}</span>`}</td>
+    </tr>
+  `).join('');
+}
+
+updateAll();
+
+// ══ LEADS ════════════════════════════════════════════════════════════
+const LEADS = [
+  // Google Places — חדרה
+  {city:"חדרה",name:"משפחתון Familia",address:"רמב\"ם 11, חדרה",source:"Google Places",loc:"✓",rating:"",reviews:0,url:"https://maps.google.com/?cid=ChIJDxBTTYYTHRURD4F96MQMIII"},
+  {city:"חדרה",name:"משפחתון סמדרי",address:"השלכת 10ב, חדרה",source:"Google Places",loc:"✓",rating:"",reviews:0,url:"https://maps.google.com/?cid=ChIJCZ3wudUTHRURHJDDTZr3Xgg"},
+  {city:"חדרה",name:"פעוטון תותי",address:"האשור 12, חדרה",source:"Google Places",loc:"✓",rating:"",reviews:0,url:"https://maps.google.com/?cid=ChIJFyNOePcTHRURMbhrXPOVrsQ"},
+  {city:"חדרה",name:"גן חצב",address:"מלחמת ששת הימים 20, חדרה",source:"Google Places",loc:"✓",rating:"5.0",reviews:1,url:"https://maps.google.com/?cid=ChIJY1j4HlsSHRURyJZwsMxl9iM"},
+  {city:"חדרה",name:"גן תאנה",address:"הלל יפה 10, חדרה",source:"Google Places",loc:"✓",rating:"",reviews:0,url:"https://maps.google.com/?cid=ChIJYc9vNlASHRURhtX6hKti-Mo"},
+  {city:"חדרה",name:"גן אסתר הס",address:"הנרייטה סולד 14, חדרה",source:"Google Places",loc:"✓",rating:"4.1",reviews:10,url:"https://maps.google.com/?cid=ChIJMRwXnDgSHRURzkNS1TmAmh0"},
+  {city:"חדרה",name:"הלב המונטסורי",address:"המכבים 7, חדרה",source:"Google Places",loc:"✓",rating:"5.0",reviews:7,url:"https://maps.google.com/?cid=ChIJZWdty-0THRURjHo4Ey74Mws"},
+  {city:"חדרה",name:"משפחתון צ'יקיטיטוס",address:"הגבורה 23, פרדס חנה כרכור",source:"Google Places",loc:"סמוכה",rating:"5.0",reviews:3,url:"https://maps.google.com/?cid=ChIJIe8b_0UOHRUR6E8ul-davq4"},
+  {city:"חדרה",name:"ארט גן - משפחתון",address:"גינת אגוז 1, פרדס חנה כרכור",source:"Google Places",loc:"סמוכה",rating:"",reviews:0,url:"https://maps.google.com/?cid=ChIJlYuwEQkOHRURvkOD0PM96YM"},
+  {city:"חדרה",name:"פעוטון מיץ פטל",address:"עצמאות 17, פרדס חנה כרכור",source:"Google Places",loc:"סמוכה",rating:"5.0",reviews:1,url:"https://maps.google.com/?cid=ChIJs-pCxEEOHRURcXCcNvG8U4c"},
+  {city:"חדרה",name:"כפר ילדים נווה מיכאל",address:"הצפירה 1, פרדס חנה כרכור",source:"Google Places",loc:"סמוכה",rating:"4.5",reviews:158,url:"https://maps.google.com/?cid=ChIJkWPCIz4OHRURUvxJp1hhMkw"},
+  // Google Places — קריית אתא
+  {city:"קריית אתא",name:"גן פעוטון לילך",address:"יהודה הנשיא 24, קרית אתא",source:"Google Places",loc:"✓",rating:"3.7",reviews:3,url:"https://maps.google.com/?cid=ChIJKbxvNbW2HRURPwqw_82yRw0"},
+  {city:"קריית אתא",name:"גן לאה",address:"המייסדים 29, קרית אתא",source:"Google Places",loc:"✓",rating:"",reviews:0,url:"https://maps.google.com/?cid=ChIJMzmwZMGxHRURVnspBjb4zug"},
+  {city:"קריית אתא",name:"פעוטון פעמוני טל",address:"פייט מונדריאן 23, קרית אתא",source:"Google Places",loc:"✓",rating:"5.0",reviews:1,url:"https://maps.google.com/?cid=ChIJS0OcmBq0HRUR8adNMn9bHfI"},
+  {city:"קריית אתא",name:"גן הגוזלים",address:"שדרות הציונות 45, קרית אתא",source:"Google Places",loc:"✓",rating:"",reviews:0,url:"https://maps.google.com/?cid=ChIJrVc9fMC3HRURHHR_ni7n-BA"},
+  {city:"קריית אתא",name:"פעוטון פרפרים",address:"דרך עכו חיפה 139, קרית מוצקין",source:"Google Places",loc:"סמוכה",rating:"4.9",reviews:48,url:"https://maps.google.com/?cid=ChIJk0rL3-K2HRURlozlnty9S0M"},
+  {city:"קריית אתא",name:"גן צוציקים",address:"שדרות וייצמן 28, קרית ים",source:"Google Places",loc:"סמוכה",rating:"4.9",reviews:18,url:"https://maps.google.com/?cid=ChIJoaoSsQm3HRURR6nTjB4JHRo"},
+  {city:"קריית אתא",name:"גן ילדים הדבורה מאיה",address:"חרמון 2, קריית ביאליק",source:"Google Places",loc:"סמוכה",rating:"4.5",reviews:8,url:"https://maps.google.com/?cid=ChIJNSFaBD-3HRURJmfjWysUmss"},
+  {city:"קריית אתא",name:"גן כוכבים",address:"יחיעם 13, קרית ים",source:"Google Places",loc:"סמוכה",rating:"4.3",reviews:23,url:"https://maps.google.com/?cid=ChIJ5zFr9Iy3HRURBcjHBRh6JPo"},
+  {city:"קריית אתא",name:"גן לי - אור",address:"שדרות ביאליק 15, קרית ים",source:"Google Places",loc:"סמוכה",rating:"5.0",reviews:11,url:"https://maps.google.com/?cid=ChIJZVkkUwG3HRUR6M96-BSzbT4"},
+  {city:"קריית אתא",name:"הפעוטון של סיון",address:"גרושקביץ' 38, קרית מוצקין",source:"Google Places",loc:"סמוכה",rating:"5.0",reviews:1,url:"https://maps.google.com/?cid=ChIJmzFyTT23HRURxeQSMGVdWOQ"},
+  {city:"קריית אתא",name:"גן ילדים חלום קטן (0–3)",address:"הנוטר 78, חיפה",source:"Google Places",loc:"סמוכה",rating:"",reviews:0,url:"https://maps.google.com/?cid=ChIJCYtHfjG3HRURxIE95bSAF3c"},
+  {city:"קריית אתא",name:"פעוטון חן",address:"משה שרת 75, חיפה",source:"Google Places",loc:"סמוכה",rating:"5.0",reviews:1,url:"https://maps.google.com/?cid=ChIJjXqHSiW3HRURkTuPXxw_yFA"},
+  {city:"קריית אתא",name:"פעוטון אביטל",address:"הרב מיימון 5א, חיפה",source:"Google Places",loc:"סמוכה",rating:"5.0",reviews:3,url:"https://maps.google.com/?cid=ChIJ2ZPJPMK7HRURXSj9DQgE7x8"},
+  {city:"קריית אתא",name:"משפחתון מעיין השמחה",address:"חפציבה, חיפה",source:"Google Places",loc:"סמוכה",rating:"",reviews:0,url:"https://maps.google.com/?cid=ChIJH71jscG3HRURIc2ZMiwkvRM"},
+  {city:"קריית אתא",name:"בית וגל",address:"חרמון 9, קריית ביאליק",source:"Google Places",loc:"סמוכה",rating:"3.7",reviews:3,url:"https://maps.google.com/?cid=ChIJv_mR_Y-3HRUReQ0FZw0Dqes"},
+  {city:"קריית אתא",name:"היער הקטן — מעון ביתי",address:"השיקמה 22, נשר",source:"Google Places",loc:"סמוכה",rating:"5.0",reviews:2,url:"https://maps.google.com/?cid=ChIJy0edN3e7HRURBklg_k1h7fY"},
+  {city:"קריית אתא",name:"משפחתון בלה",address:"האלון 3, נשר",source:"Google Places",loc:"סמוכה",rating:"5.0",reviews:1,url:"https://maps.google.com/?cid=ChIJYU9cuf-7HRURtzVW5UMxjMo"},
+  {city:"קריית אתא",name:"גן תדהר",address:"שבטי ישראל 64, חיפה",source:"Google Places",loc:"סמוכה",rating:"",reviews:0,url:"https://maps.google.com/?cid=ChIJVXpHm6O3HRURhZLT4JR73C8"},
+  {city:"קריית אתא",name:"גן ומנגינה",address:"הפלמ\"ח 3, קריית ביאליק",source:"Google Places",loc:"סמוכה",rating:"",reviews:0,url:"https://maps.google.com/?cid=ChIJxZcn_1e3HRURN34zbTjgFyA"},
+  {city:"קריית אתא",name:"פעוטון ערבה",address:"כפר המכבי",source:"Google Places",loc:"סמוכה",rating:"",reviews:0,url:"https://maps.google.com/?cid=ChIJJ5OohouxHRURaDu7GmBz9LE"},
+  {city:"קריית אתא",name:"גן הגוזלים - גן ילדים",address:"שדרות ביאליק 15, קרית ים",source:"Google Places",loc:"סמוכה",rating:"5.0",reviews:11,url:"https://maps.google.com/?cid=ChIJZVkkUwG3HRUR6M96-BSzbT4"},
+  {city:"קריית אתא",name:"גן הדובשנים",address:"לירז אקסלרד 1, חיפה",source:"Google Places",loc:"סמוכה",rating:"5.0",reviews:28,url:"https://maps.google.com/?cid=ChIJ1QEf-JK6HRURXEpioguMr-0"},
+  {city:"קריית אתא",name:"גן המכללה לגיל הרך",address:"ברכה פולד 14, חיפה",source:"Google Places",loc:"סמוכה",rating:"4.3",reviews:6,url:"https://maps.google.com/?cid=ChIJYRwEHS-3HRUR6tj89A6exGg"},
+  {city:"קריית אתא",name:"מרכז מילמן",address:"חטיבת כרמלי 34, חיפה",source:"Google Places",loc:"סמוכה",rating:"4.3",reviews:4,url:"https://maps.google.com/?cid=ChIJAQCDDmhJHRUR4ThirHeZOkY"},
+  {city:"קריית אתא",name:"צהרון חיפה - תות",address:"חומה ומגדל 28, חיפה",source:"Google Places",loc:"סמוכה",rating:"5.0",reviews:3,url:"https://maps.google.com/?cid=ChIJ1-x_5i63HRURGeb6QKEcUOE"},
+  // Web search — חדרה
+  {city:"חדרה",name:"פעוטון שביל החלב",address:"הגיבורים 125, חדרה",source:"דפי זהב",loc:"✓",rating:"",reviews:0,url:"https://www.d.co.il/70940140/10880/"},
+  {city:"חדרה",name:"פעוטון 24/7",address:"הנשיא וייצמן 43, חדרה",source:"דפי זהב",loc:"✓",rating:"",reviews:0,url:"https://www.d.co.il/80189979/10880/"},
+  {city:"חדרה",name:"צעד צעד",address:"האחו 11, חדרה",source:"B144",loc:"✓",rating:"",reviews:0,url:"https://www.b144.co.il/b144_sip/4A1404134470655D4C1000154577655940/"},
+  {city:"חדרה",name:"הפעוטון של מירית",address:"חדרה",source:"לוח נט",loc:"✓",rating:"",reviews:0,url:"https://www.luachnet.co.il/biz/categories/%D7%92%D7%A0%D7%99-%D7%99%D7%9C%D7%93%D7%99%D7%9D-%D7%9E%D7%A9%D7%A4%D7%97%D7%AA%D7%95%D7%A0%D7%99%D7%9D-%D7%A4%D7%A2%D7%95%D7%98%D7%95%D7%A0%D7%99%D7%9D/%D7%A4%D7%A2%D7%95%D7%98%D7%95%D7%9F/%D7%A4%D7%A2%D7%95%D7%98%D7%95%D7%A0%D7%99%D7%9D-%D7%91%D7%97%D7%93%D7%A8%D7%94/%D7%94%D7%A4%D7%A2%D7%95%D7%98%D7%95%D7%9F-%D7%A9%D7%9C-%D7%9E%D7%99%D7%A8%D7%99%D7%AA/4048"},
+  // Web search — קריית אתא
+  {city:"קריית אתא",name:"צהרון פעוטון תהילה",address:"קרית אתא",source:"לוח נט",loc:"✓",rating:"",reviews:0,url:"https://www.luachnet.co.il/biz/categories/%D7%92%D7%A0%D7%99-%D7%99%D7%9C%D7%93%D7%99%D7%9D-%D7%9E%D7%A9%D7%A4%D7%97%D7%AA%D7%95%D7%A0%D7%99%D7%9D-%D7%A4%D7%A2%D7%95%D7%98%D7%95%D7%A0%D7%99%D7%9D/%D7%A4%D7%A2%D7%95%D7%98%D7%95%D7%9F/%D7%A4%D7%A2%D7%95%D7%98%D7%95%D7%A0%D7%99%D7%9D-%D7%91%D7%A7%D7%A8%D7%99%D7%95%D7%AA/%D7%A6%D7%94%D7%A8%D7%95%D7%9F-%D7%A4%D7%A2%D7%95%D7%98%D7%95%D7%9F-%D7%AA%D7%94%D7%99%D7%9C%D7%94-%D7%91%D7%A7%D7%A8%D7%99%D7%AA-%D7%90%D7%AA%D7%90/3640"},
+  {city:"קריית אתא",name:"הגן של שרי",address:"קרית אתא",source:"לוח נט",loc:"✓",rating:"",reviews:0,url:"https://www.luachnet.co.il/biz/categories/%D7%92%D7%A0%D7%99-%D7%99%D7%9C%D7%93%D7%99%D7%9D-%D7%9E%D7%A9%D7%A4%D7%97%D7%AA%D7%95%D7%A0%D7%99%D7%9D-%D7%A4%D7%A2%D7%95%D7%98%D7%95%D7%A0%D7%99%D7%9D/%D7%A4%D7%A2%D7%95%D7%98%D7%95%D7%9F/%D7%A4%D7%A2%D7%95%D7%98%D7%95%D7%A0%D7%99%D7%9D-%D7%91%D7%A7%D7%A8%D7%99%D7%95%D7%AA/%D7%94%D7%92%D7%9F-%D7%A9%D7%9C-%D7%A9%D7%A8%D7%99/5071"},
+  {city:"קריית אתא",name:'פעוטון "אור הגאולה"',address:'י"ל פרץ 20, קרית אתא',source:"דפי זהב",loc:"✓",rating:"",reviews:0,url:"https://www.d.co.il/80031298/10880/"},
+  {city:"קריית אתא",name:"גן פעוטון ניצנים",address:"הרצל 22, קרית אתא",source:"דפי זהב",loc:"✓",rating:"",reviews:0,url:"https://www.d.co.il/15737650/10880/"},
+];
+
+function renderLeads() {
+  const q = document.getElementById('leadsSearch').value.toLowerCase();
+  const city = document.getElementById('leadsCityFilter').value;
+  const loc = document.getElementById('leadsLocFilter').value;
+  const src = document.getElementById('leadsSrcFilter').value;
+
+  const data = LEADS.filter(l =>
+    (!q || l.name.toLowerCase().includes(q) || l.address.toLowerCase().includes(q)) &&
+    (!city || l.city === city) &&
+    (!loc || l.loc === loc) &&
+    (!src || l.source === src)
+  );
+
+  document.getElementById('leadsCountBadge').textContent = data.length;
+  document.getElementById('leadsFooter').textContent = `מוצגים ${data.length} מתוך ${LEADS.length} לידים`;
+
+  const srcTag = s => {
+    const colors = {"Google Places":"#4285F4","דפי זהב":"#f6a623","B144":"#e03e3e","לוח נט":"#805ad5"};
+    return `<span class="src" style="background:${colors[s]||'#a0aec0'}20;color:${colors[s]||'#555'};border:1px solid ${colors[s]||'#ccc'}40">${s}</span>`;
+  };
+
+  document.getElementById('leadsTbody').innerHTML = data.map(l => `
+    <tr style="${l.loc==='✓' ? 'background:#f0fff4' : ''}">
+      <td><span class="${l.city==='חדרה'?'city-pill-h':'city-pill-k'}">${l.city}</span></td>
+      <td><strong>${l.name}</strong></td>
+      <td style="color:#718096;font-size:0.75rem;max-width:180px">${l.address}</td>
+      <td>${srcTag(l.source)}</td>
+      <td style="text-align:center">${l.loc==='✓' ? '<span style="color:#276749;font-weight:700">✓ בעיר</span>' : '<span style="color:#a0aec0">סמוכה</span>'}</td>
+      <td style="text-align:center;direction:ltr">${l.rating ? `⭐ ${l.rating}` : '<span style="color:#a0aec0">—</span>'}</td>
+      <td><a href="${l.url}" target="_blank" style="color:#2d6a9f;font-size:0.8rem;text-decoration:none">🔗 פתח</a></td>
+    </tr>
+  `).join('');
+}
+
+renderLeads();
+</script>
+</body>
+</html>

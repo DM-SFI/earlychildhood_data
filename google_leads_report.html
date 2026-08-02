@@ -1,0 +1,491 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>פיילוט כרייה — מסגרות ללא סמל רשמי</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', Arial, sans-serif; background: #f5f7fa; color: #222; font-size: 15px; }
+
+  header { background: #1a3a6e; color: white; padding: 28px 40px 20px; }
+  header h1 { font-size: 22px; margin-bottom: 6px; }
+  header p { font-size: 13px; opacity: 0.75; }
+
+  .container { max-width: 960px; margin: 0 auto; padding: 28px 24px; }
+
+  /* Stats bar */
+  .stats { display: flex; gap: 16px; margin-bottom: 28px; }
+  .stat-card { flex: 1; background: white; border-radius: 10px; padding: 18px 20px; box-shadow: 0 1px 4px rgba(0,0,0,.08); text-align: center; border-top: 4px solid #1a3a6e; }
+  .stat-card.green { border-top-color: #28a745; }
+  .stat-card.orange { border-top-color: #e07b00; }
+  .stat-num { font-size: 32px; font-weight: 700; color: #1a3a6e; }
+  .stat-card.green .stat-num { color: #28a745; }
+  .stat-card.orange .stat-num { color: #e07b00; }
+  .stat-label { font-size: 12px; color: #666; margin-top: 4px; }
+
+  /* Section */
+  .section { background: white; border-radius: 10px; box-shadow: 0 1px 4px rgba(0,0,0,.08); margin-bottom: 24px; overflow: hidden; }
+  .section-header { background: #1a3a6e; color: white; padding: 14px 20px; font-size: 15px; font-weight: 600; display: flex; justify-content: space-between; align-items: center; }
+  .section-header .badge { background: rgba(255,255,255,0.2); border-radius: 12px; padding: 2px 10px; font-size: 12px; }
+
+  /* Table */
+  table { width: 100%; border-collapse: collapse; }
+  th { background: #eef2f8; font-size: 12px; color: #555; padding: 10px 14px; text-align: right; font-weight: 600; }
+  td { padding: 10px 14px; border-bottom: 1px solid #f0f0f0; font-size: 13px; vertical-align: middle; }
+  tr:last-child td { border-bottom: none; }
+  tr:hover td { background: #fafbff; }
+
+  .tag { display: inline-block; border-radius: 10px; padding: 2px 8px; font-size: 11px; font-weight: 600; }
+  .tag-city { background: #dff0d8; color: #2a6e1a; }
+  .tag-nearby { background: #fff3cd; color: #856404; }
+  .tag-high { background: #f8d7da; color: #842029; }
+
+  .stars { color: #f5a623; font-size: 12px; }
+  .stars span { color: #999; }
+
+  a.maps-link { color: #1a3a6e; text-decoration: none; font-size: 11px; }
+  a.maps-link:hover { text-decoration: underline; }
+
+  /* Recommendations */
+  .rec-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; padding: 20px; }
+  .rec-card { border: 1px solid #e0e7f0; border-radius: 8px; padding: 16px; }
+  .rec-card h4 { font-size: 14px; color: #1a3a6e; margin-bottom: 8px; display: flex; align-items: center; gap: 6px; }
+  .rec-card p, .rec-card li { font-size: 13px; color: #444; line-height: 1.6; }
+  .rec-card ul { padding-right: 16px; }
+  .rec-card.priority { border-color: #1a3a6e; background: #f8faff; }
+
+  .method-table { padding: 16px 20px 20px; }
+  .method-table table { border: 1px solid #e8ecf0; border-radius: 8px; overflow: hidden; }
+  .method-table th { background: #f0f4fa; }
+
+  .note { background: #fffbe6; border-right: 4px solid #f0c040; padding: 12px 16px; margin: 16px 20px; border-radius: 4px; font-size: 13px; color: #555; }
+
+  footer { text-align: center; color: #aaa; font-size: 12px; padding: 20px; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>פיילוט כרייה — מסגרות ללא סמל רשמי</h1>
+  <p>מקור: Google Places API · ערים: חדרה + קריית אתא · תאריך: 26.5.2026</p>
+</header>
+
+<div class="container">
+
+  <!-- Stats -->
+  <div class="stats">
+    <div class="stat-card">
+      <div class="stat-num">2</div>
+      <div class="stat-label">ערים שנסרקו</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-num">151</div>
+      <div class="stat-label">תוצאות Google (אחרי סינון)</div>
+    </div>
+    <div class="stat-card green">
+      <div class="stat-num">36</div>
+      <div class="stat-label">לידים שלא נמצאים במפת הטף</div>
+    </div>
+    <div class="stat-card orange">
+      <div class="stat-num">~15</div>
+      <div class="stat-label">לידים ממוקדים לאימות ידני</div>
+    </div>
+  </div>
+
+  <!-- Hadera -->
+  <div class="section">
+    <div class="section-header">
+      🏙️ חדרה
+      <span class="badge">11 לידים</span>
+    </div>
+    <table>
+      <thead>
+        <tr>
+          <th>שם</th>
+          <th>כתובת</th>
+          <th>דירוג</th>
+          <th>עיר</th>
+          <th>לינק</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>משפחתון Familia</strong></td>
+          <td>רמב"ם 11, חדרה</td>
+          <td><span style="color:#999">אין</span></td>
+          <td><span class="tag tag-city">חדרה</span></td>
+          <td><a class="maps-link" href="https://maps.google.com/?cid=ChIJDxBTTYYTHRURD4F96MQMIII" target="_blank">📍 מפות</a></td>
+        </tr>
+        <tr>
+          <td><strong>משפחתון סמדרי</strong></td>
+          <td>השלכת 10ב, חדרה</td>
+          <td><span style="color:#999">אין</span></td>
+          <td><span class="tag tag-city">חדרה</span></td>
+          <td><a class="maps-link" href="https://maps.google.com/?cid=ChIJCZ3wudUTHRURHJDDTZr3Xgg" target="_blank">📍 מפות</a></td>
+        </tr>
+        <tr>
+          <td>פעוטון תותי</td>
+          <td>האשור 12, חדרה</td>
+          <td><span style="color:#999">אין</span></td>
+          <td><span class="tag tag-city">חדרה</span></td>
+          <td><a class="maps-link" href="https://maps.google.com/?cid=ChIJFyNOePcTHRURMbhrXPOVrsQ" target="_blank">📍 מפות</a></td>
+        </tr>
+        <tr>
+          <td>גן חצב</td>
+          <td>מלחמת ששת הימים 20, חדרה</td>
+          <td><span class="stars">★ 5.0 <span>(1)</span></span></td>
+          <td><span class="tag tag-city">חדרה</span></td>
+          <td><a class="maps-link" href="https://maps.google.com/?cid=ChIJY1j4HlsSHRURyJZwsMxl9iM" target="_blank">📍 מפות</a></td>
+        </tr>
+        <tr>
+          <td>גן תאנה</td>
+          <td>הלל יפה 10, חדרה</td>
+          <td><span style="color:#999">אין</span></td>
+          <td><span class="tag tag-city">חדרה</span></td>
+          <td><a class="maps-link" href="https://maps.google.com/?cid=ChIJYc9vNlASHRURhtX6hKti-Mo" target="_blank">📍 מפות</a></td>
+        </tr>
+        <tr>
+          <td>גן אסתר הס</td>
+          <td>הנרייטה סולד 14, חדרה</td>
+          <td><span class="stars">★ 4.1 <span>(10)</span></span></td>
+          <td><span class="tag tag-city">חדרה</span></td>
+          <td><a class="maps-link" href="https://maps.google.com/?cid=ChIJMRwXnDgSHRURzkNS1TmAmh0" target="_blank">📍 מפות</a></td>
+        </tr>
+        <tr>
+          <td>הלב המונטסורי</td>
+          <td>המכבים 7, חדרה</td>
+          <td><span class="stars">★ 5.0 <span>(7)</span></span></td>
+          <td><span class="tag tag-city">חדרה</span></td>
+          <td><a class="maps-link" href="https://maps.google.com/?cid=ChIJZWdty-0THRURjHo4Ey74Mws" target="_blank">📍 מפות</a></td>
+        </tr>
+        <tr>
+          <td>משפחתון צ'יקיטיטוס</td>
+          <td>הגבורה 23, פרדס חנה כרכור</td>
+          <td><span class="stars">★ 5.0 <span>(3)</span></span></td>
+          <td><span class="tag tag-nearby">סמוכה</span></td>
+          <td><a class="maps-link" href="https://maps.google.com/?cid=ChIJIe8b_0UOHRUR6E8ul-davq4" target="_blank">📍 מפות</a></td>
+        </tr>
+        <tr>
+          <td>ארט גן - משפחתון</td>
+          <td>גינת אגוז 1, פרדס חנה כרכור</td>
+          <td><span style="color:#999">אין</span></td>
+          <td><span class="tag tag-nearby">סמוכה</span></td>
+          <td><a class="maps-link" href="https://maps.google.com/?cid=ChIJlYuwEQkOHRURvkOD0PM96YM" target="_blank">📍 מפות</a></td>
+        </tr>
+        <tr>
+          <td>פעוטון מיץ פטל</td>
+          <td>עצמאות 17, פרדס חנה כרכור</td>
+          <td><span class="stars">★ 5.0 <span>(1)</span></span></td>
+          <td><span class="tag tag-nearby">סמוכה</span></td>
+          <td><a class="maps-link" href="https://maps.google.com/?cid=ChIJs-pCxEEOHRURcXCcNvG8U4c" target="_blank">📍 מפות</a></td>
+        </tr>
+        <tr>
+          <td>כפר ילדים נווה מיכאל</td>
+          <td>הצפירה 1, פרדס חנה כרכור</td>
+          <td><span class="stars">★ 4.5 <span>(158)</span></span></td>
+          <td><span class="tag tag-nearby">סמוכה</span></td>
+          <td><a class="maps-link" href="https://maps.google.com/?cid=ChIJkWPCIz4OHRURUvxJp1hhMkw" target="_blank">📍 מפות</a></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Kiryat Ata -->
+  <div class="section">
+    <div class="section-header">
+      🏙️ קריית אתא
+      <span class="badge">25 לידים</span>
+    </div>
+    <table>
+      <thead>
+        <tr>
+          <th>שם</th>
+          <th>כתובת</th>
+          <th>דירוג</th>
+          <th>עיר</th>
+          <th>לינק</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>גן פעוטון לילך</strong></td>
+          <td>יהודה הנשיא 24, קרית אתא</td>
+          <td><span class="stars">★ 3.7 <span>(3)</span></span></td>
+          <td><span class="tag tag-city">קריית אתא</span></td>
+          <td><a class="maps-link" href="https://maps.google.com/?cid=ChIJKbxvNbW2HRURPwqw_82yRw0" target="_blank">📍 מפות</a></td>
+        </tr>
+        <tr>
+          <td><strong>גן לאה</strong></td>
+          <td>המייסדים 29, קרית אתא</td>
+          <td><span style="color:#999">אין</span></td>
+          <td><span class="tag tag-city">קריית אתא</span></td>
+          <td><a class="maps-link" href="https://maps.google.com/?cid=ChIJMzmwZMGxHRURVnspBjb4zug" target="_blank">📍 מפות</a></td>
+        </tr>
+        <tr>
+          <td><strong>פעוטון פעמוני טל</strong></td>
+          <td>פייט מונדריאן 23, קרית אתא</td>
+          <td><span class="stars">★ 5.0 <span>(1)</span></span></td>
+          <td><span class="tag tag-city">קריית אתא</span></td>
+          <td><a class="maps-link" href="https://maps.google.com/?cid=ChIJS0OcmBq0HRUR8adNMn9bHfI" target="_blank">📍 מפות</a></td>
+        </tr>
+        <tr>
+          <td><strong>גן הגוזלים</strong></td>
+          <td>שדרות הציונות 45, קרית אתא</td>
+          <td><span style="color:#999">אין</span></td>
+          <td><span class="tag tag-city">קריית אתא</span></td>
+          <td><a class="maps-link" href="https://maps.google.com/?cid=ChIJrVc9fMC3HRURHHR_ni7n-BA" target="_blank">📍 מפות</a></td>
+        </tr>
+        <tr>
+          <td>פעוטון פרפרים</td>
+          <td>דרך עכו חיפה 139, קרית מוצקין</td>
+          <td><span class="stars">★ 4.9 <span>(48)</span></span></td>
+          <td><span class="tag tag-nearby">סמוכה</span></td>
+          <td><a class="maps-link" href="https://maps.google.com/?cid=ChIJk0rL3-K2HRURlozlnty9S0M" target="_blank">📍 מפות</a></td>
+        </tr>
+        <tr>
+          <td>גן צוציקים</td>
+          <td>שדרות וייצמן 28, קרית ים</td>
+          <td><span class="stars">★ 4.9 <span>(18)</span></span></td>
+          <td><span class="tag tag-nearby">סמוכה</span></td>
+          <td><a class="maps-link" href="https://maps.google.com/?cid=ChIJoaoSsQm3HRURR6nTjB4JHRo" target="_blank">📍 מפות</a></td>
+        </tr>
+        <tr>
+          <td>גן ילדים הדבורה מאיה</td>
+          <td>חרמון 2, קריית ביאליק</td>
+          <td><span class="stars">★ 4.5 <span>(8)</span></span></td>
+          <td><span class="tag tag-nearby">סמוכה</span></td>
+          <td><a class="maps-link" href="https://maps.google.com/?cid=ChIJNSFaBD-3HRURJmfjWysUmss" target="_blank">📍 מפות</a></td>
+        </tr>
+        <tr>
+          <td>גן כוכבים</td>
+          <td>יחיעם 13, קרית ים</td>
+          <td><span class="stars">★ 4.3 <span>(23)</span></span></td>
+          <td><span class="tag tag-nearby">סמוכה</span></td>
+          <td><a class="maps-link" href="https://maps.google.com/?cid=ChIJ5zFr9Iy3HRURBcjHBRh6JPo" target="_blank">📍 מפות</a></td>
+        </tr>
+        <tr>
+          <td>גן הכוכבים של מיטל</td>
+          <td>אושה 13, קרית מוצקין</td>
+          <td><span class="stars">★ 4.2 <span>(15)</span></span></td>
+          <td><span class="tag tag-nearby">סמוכה</span></td>
+          <td><a class="maps-link" href="https://maps.google.com/?cid=ChIJnVogPY23HRURz3gFi2URGyU" target="_blank">📍 מפות</a></td>
+        </tr>
+        <tr>
+          <td>גן לי - אור</td>
+          <td>שדרות ביאליק 15, קרית ים</td>
+          <td><span class="stars">★ 5.0 <span>(11)</span></span></td>
+          <td><span class="tag tag-nearby">סמוכה</span></td>
+          <td><a class="maps-link" href="https://maps.google.com/?cid=ChIJZVkkUwG3HRUR6M96-BSzbT4" target="_blank">📍 מפות</a></td>
+        </tr>
+        <tr>
+          <td>הפעוטון של סיון</td>
+          <td>גרושקביץ' 38, קרית מוצקין</td>
+          <td><span class="stars">★ 5.0 <span>(1)</span></span></td>
+          <td><span class="tag tag-nearby">סמוכה</span></td>
+          <td><a class="maps-link" href="https://maps.google.com/?cid=ChIJmzFyTT23HRURxeQSMGVdWOQ" target="_blank">📍 מפות</a></td>
+        </tr>
+        <tr>
+          <td>גן ילדים חלום קטן (0–3 שנים)</td>
+          <td>הנוטר 78, חיפה</td>
+          <td><span style="color:#999">אין</span></td>
+          <td><span class="tag tag-nearby">סמוכה</span></td>
+          <td><a class="maps-link" href="https://maps.google.com/?cid=ChIJCYtHfjG3HRURxIE95bSAF3c" target="_blank">📍 מפות</a></td>
+        </tr>
+        <tr>
+          <td>פעוטון חן</td>
+          <td>משה שרת 75, חיפה</td>
+          <td><span class="stars">★ 5.0 <span>(1)</span></span></td>
+          <td><span class="tag tag-nearby">סמוכה</span></td>
+          <td><a class="maps-link" href="https://maps.google.com/?cid=ChIJjXqHSiW3HRURkTuPXxw_yFA" target="_blank">📍 מפות</a></td>
+        </tr>
+        <tr>
+          <td>פעוטון אביטל</td>
+          <td>הרב מיימון 5א, חיפה</td>
+          <td><span class="stars">★ 5.0 <span>(3)</span></span></td>
+          <td><span class="tag tag-nearby">סמוכה</span></td>
+          <td><a class="maps-link" href="https://maps.google.com/?cid=ChIJ2ZPJPMK7HRURXSj9DQgE7x8" target="_blank">📍 מפות</a></td>
+        </tr>
+        <tr>
+          <td>משפחתון מעיין השמחה</td>
+          <td>חפציבה, חיפה</td>
+          <td><span style="color:#999">אין</span></td>
+          <td><span class="tag tag-nearby">סמוכה</span></td>
+          <td><a class="maps-link" href="https://maps.google.com/?cid=ChIJH71jscG3HRURIc2ZMiwkvRM" target="_blank">📍 מפות</a></td>
+        </tr>
+        <tr>
+          <td>בית וגל</td>
+          <td>חרמון 9, קריית ביאליק</td>
+          <td><span class="stars">★ 3.7 <span>(3)</span></span></td>
+          <td><span class="tag tag-nearby">סמוכה</span></td>
+          <td><a class="maps-link" href="https://maps.google.com/?cid=ChIJv_mR_Y-3HRUReQ0FZw0Dqes" target="_blank">📍 מפות</a></td>
+        </tr>
+        <tr>
+          <td>היער הקטן — מעון ביתי</td>
+          <td>השיקמה 22, נשר</td>
+          <td><span class="stars">★ 5.0 <span>(2)</span></span></td>
+          <td><span class="tag tag-nearby">סמוכה</span></td>
+          <td><a class="maps-link" href="https://maps.google.com/?cid=ChIJy0edN3e7HRURBklg_k1h7fY" target="_blank">📍 מפות</a></td>
+        </tr>
+        <tr>
+          <td>משפחתון בלה</td>
+          <td>האלון 3, נשר</td>
+          <td><span class="stars">★ 5.0 <span>(1)</span></span></td>
+          <td><span class="tag tag-nearby">סמוכה</span></td>
+          <td><a class="maps-link" href="https://maps.google.com/?cid=ChIJYU9cuf-7HRURtzVW5UMxjMo" target="_blank">📍 מפות</a></td>
+        </tr>
+        <tr>
+          <td>גן תדהר</td>
+          <td>שבטי ישראל 64, חיפה</td>
+          <td><span style="color:#999">אין</span></td>
+          <td><span class="tag tag-nearby">סמוכה</span></td>
+          <td><a class="maps-link" href="https://maps.google.com/?cid=ChIJVXpHm6O3HRURhZLT4JR73C8" target="_blank">📍 מפות</a></td>
+        </tr>
+        <tr>
+          <td>גן ומנגינה</td>
+          <td>הפלמ"ח 3, קריית ביאליק</td>
+          <td><span style="color:#999">אין</span></td>
+          <td><span class="tag tag-nearby">סמוכה</span></td>
+          <td><a class="maps-link" href="https://maps.google.com/?cid=ChIJxZcn_1e3HRURN34zbTjgFyA" target="_blank">📍 מפות</a></td>
+        </tr>
+        <tr>
+          <td>פעוטון ערבה</td>
+          <td>כפר המכבי</td>
+          <td><span style="color:#999">אין</span></td>
+          <td><span class="tag tag-nearby">סמוכה</span></td>
+          <td><a class="maps-link" href="https://maps.google.com/?cid=ChIJJ5OohouxHRURaDu7GmBz9LE" target="_blank">📍 מפות</a></td>
+        </tr>
+        <tr>
+          <td>צהרון חיפה - תות</td>
+          <td>חומה ומגדל 28, חיפה</td>
+          <td><span class="stars">★ 5.0 <span>(3)</span></span></td>
+          <td><span class="tag tag-nearby">סמוכה</span></td>
+          <td><a class="maps-link" href="https://maps.google.com/?cid=ChIJ1-x_5i63HRURGeb6QKEcUOE" target="_blank">📍 מפות</a></td>
+        </tr>
+        <tr>
+          <td>גן הדובשנים</td>
+          <td>לירז אקסלרד 1, חיפה</td>
+          <td><span class="stars">★ 5.0 <span>(28)</span></span></td>
+          <td><span class="tag tag-nearby">סמוכה</span></td>
+          <td><a class="maps-link" href="https://maps.google.com/?cid=ChIJ1QEf-JK6HRURXEpioguMr-0" target="_blank">📍 מפות</a></td>
+        </tr>
+        <tr>
+          <td>גן המכללה לגיל הרך</td>
+          <td>ברכה פולד 14, חיפה</td>
+          <td><span class="stars">★ 4.3 <span>(6)</span></span></td>
+          <td><span class="tag tag-nearby">סמוכה</span></td>
+          <td><a class="maps-link" href="https://maps.google.com/?cid=ChIJYRwEHS-3HRUR6tj89A6exGg" target="_blank">📍 מפות</a></td>
+        </tr>
+        <tr>
+          <td>מרכז מילמן</td>
+          <td>חטיבת כרמלי 34, חיפה</td>
+          <td><span class="stars">★ 4.3 <span>(4)</span></span></td>
+          <td><span class="tag tag-nearby">סמוכה</span></td>
+          <td><a class="maps-link" href="https://maps.google.com/?cid=ChIJAQCDDmhJHRUR4ThirHeZOkY" target="_blank">📍 מפות</a></td>
+        </tr>
+      </tbody>
+    </table>
+    <div class="note">
+      רוב ה"לידים הסמוכים" הם מקרית ים, קרית מוצקין, קרית ביאליק וחיפה — בגלל רדיוס חיפוש של 8 ק"מ. חלקן עשויות להיות מחוץ לתחום ה-SFI, אבל ניתן לצמצם לפי הסכם עם הרשות.
+    </div>
+  </div>
+
+  <!-- Recommendations -->
+  <div class="section">
+    <div class="section-header">המלצות להמשך</div>
+    <div class="rec-grid">
+      <div class="rec-card priority">
+        <h4>🎯 אימות ידני מיידי (השבוע)</h4>
+        <ul>
+          <li>לתקשר עם 7–8 המסגרות <strong>בתוך חדרה/קרית אתא</strong> עצמן — לבדוק אם פועלות ואם יש סמל</li>
+          <li>מסגרות ללא ביקורות (0 reviews) — עדיפות גבוהה: פחות סיכוי שהן כבר מוכרות</li>
+          <li>ממונה גיל הרך בעירייה יכולה לאשר תוך 10 דקות מי ידוע ומי לא</li>
+        </ul>
+      </div>
+      <div class="rec-card">
+        <h4>🔧 שיפורים טכניים לסקריפט</h4>
+        <ul>
+          <li>הוסיפי סינון לפי כתובת — רק מסגרות <em>בתוך</em> העיר המטרה</li>
+          <li>הוסיפי מונחי חיפוש: "מעון תינוקות", "בית תינוקות", "מרכז יום"</li>
+          <li>הוסיפי עוד מקורות: Waze, Bing Places, דפי זהב</li>
+        </ul>
+      </div>
+      <div class="rec-card">
+        <h4>📊 הרחבת הפיילוט</h4>
+        <ul>
+          <li>הרצה על 5–10 ערים נוספות: ~$3–5 לעיר</li>
+          <li>בכל עיר להשוות מול נתוני ה-SFI (אקסל פנימי) ולא רק מפת הטף</li>
+          <li>לבנות דשבורד ממשיך שמתעדכן אוטומטית — לא רק CSV</li>
+        </ul>
+      </div>
+      <div class="rec-card">
+        <h4>⚠️ מגבלות ידועות</h4>
+        <ul>
+          <li>Google לא יחזיר מסגרות שלא פרסמו את עצמן כלל — "תת-הקרחון" האמיתי גדול יותר</li>
+          <li>חלק מהתוצאות הן גני ילדים (3+) ולא מעונות (0–3) — צריך אימות גיל</li>
+          <li>אין בדיקה אוטומטית לרישוי — רק אם מופיע במאגרי משרד העבודה/החינוך</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- Method comparison -->
+  <div class="section">
+    <div class="section-header">השוואת שיטות כרייה</div>
+    <div class="method-table">
+      <table>
+        <thead>
+          <tr>
+            <th>שיטה</th>
+            <th>כיסוי משוער</th>
+            <th>עלות</th>
+            <th>זמן הטמעה</th>
+            <th>המלצה</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Google Places API ✅</td>
+            <td>גבוה — עסקים שפרסמו עצמם</td>
+            <td>~$5/עיר</td>
+            <td>מוכן עכשיו</td>
+            <td><span class="tag tag-city">להמשיך</span></td>
+          </tr>
+          <tr>
+            <td>דפי זהב / בזק</td>
+            <td>בינוני — רשומות ישנות יותר</td>
+            <td>חינם (scraping)</td>
+            <td>שבוע</td>
+            <td><span class="tag tag-city">להוסיף</span></td>
+          </tr>
+          <tr>
+            <td>רישיונות עסק עירוניים</td>
+            <td>גבוה מאוד — כולל בלתי-חוקיים</td>
+            <td>חינם (בקשה מהרשות)</td>
+            <td>תלוי שיתוף פעולה</td>
+            <td><span class="tag tag-city">עדיפות גבוהה</span></td>
+          </tr>
+          <tr>
+            <td>פייסבוק</td>
+            <td>גבוה — קהל הורים פעיל</td>
+            <td>עבודה ידנית</td>
+            <td>גבוה + סיכון ToS</td>
+            <td><span class="tag tag-high">להוציא מ-MVP</span></td>
+          </tr>
+          <tr>
+            <td>ממונה גיל הרך בעירייה</td>
+            <td>הכי גבוה — ידע שטחי</td>
+            <td>חינם</td>
+            <td>פגישה אחת</td>
+            <td><span class="tag tag-city">קריטי</span></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</div>
+
+<footer>נוצר: 26.5.2026 · Google Places API Pilot · SFI Early Childhood Mapping</footer>
+</body>
+</html>

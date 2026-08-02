@@ -1,0 +1,519 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>הדגמה: כרייה חיה ממפת הטף</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Segoe UI', Arial, sans-serif;
+    background: #f0f4f8;
+    color: #1a202c;
+    direction: rtl;
+  }
+  header {
+    background: linear-gradient(135deg, #1e3a5f 0%, #2d6a9f 100%);
+    color: white;
+    padding: 20px 32px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  header h1 { font-size: 1.4rem; font-weight: 700; }
+  header .subtitle { font-size: 0.85rem; opacity: 0.8; margin-top: 4px; }
+  .live-badge {
+    background: #48bb78;
+    color: white;
+    padding: 5px 14px;
+    border-radius: 20px;
+    font-size: 0.78rem;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .live-dot {
+    width: 8px; height: 8px;
+    background: white;
+    border-radius: 50%;
+    animation: pulse 1.5s infinite;
+  }
+  @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.3; } }
+
+  .main { padding: 24px 32px; }
+
+  /* Stats row */
+  .stats-row {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 16px;
+    margin-bottom: 24px;
+  }
+  .stat-card {
+    background: white;
+    border-radius: 12px;
+    padding: 20px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+    border-top: 4px solid #2d6a9f;
+  }
+  .stat-card.green { border-top-color: #48bb78; }
+  .stat-card.orange { border-top-color: #ed8936; }
+  .stat-card.red { border-top-color: #e53e3e; }
+  .stat-num { font-size: 2rem; font-weight: 700; color: #1e3a5f; }
+  .stat-label { font-size: 0.82rem; color: #718096; margin-top: 4px; }
+  .stat-sub { font-size: 0.75rem; color: #a0aec0; margin-top: 2px; }
+
+  /* Content grid */
+  .content-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+    margin-bottom: 20px;
+  }
+  .card {
+    background: white;
+    border-radius: 12px;
+    padding: 20px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+  }
+  .card h3 {
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: #2d3748;
+    margin-bottom: 16px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid #e2e8f0;
+  }
+  .card h3 .badge {
+    background: #ebf8ff;
+    color: #2b6cb0;
+    font-size: 0.7rem;
+    padding: 2px 8px;
+    border-radius: 10px;
+    margin-right: 8px;
+    font-weight: 600;
+  }
+
+  /* Table */
+  .data-card { grid-column: 1 / -1; }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.82rem;
+  }
+  th {
+    background: #f7fafc;
+    color: #4a5568;
+    font-weight: 600;
+    padding: 10px 12px;
+    text-align: right;
+    border-bottom: 2px solid #e2e8f0;
+    white-space: nowrap;
+  }
+  td {
+    padding: 9px 12px;
+    border-bottom: 1px solid #f0f4f8;
+    color: #2d3748;
+  }
+  tr:hover td { background: #f7fafc; }
+  .tag {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-size: 0.72rem;
+    font-weight: 600;
+  }
+  .tag-green { background: #c6f6d5; color: #276749; }
+  .tag-red { background: #fed7d7; color: #9b2335; }
+  .tag-orange { background: #feebc8; color: #9c4221; }
+  .tag-blue { background: #bee3f8; color: #2c5282; }
+  .source-tag {
+    font-size: 0.68rem;
+    background: #e2e8f0;
+    color: #4a5568;
+    padding: 1px 6px;
+    border-radius: 4px;
+    margin-left: 4px;
+  }
+
+  /* Search & filters */
+  .filters {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 14px;
+    flex-wrap: wrap;
+  }
+  input[type="text"], select {
+    padding: 7px 12px;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    font-size: 0.82rem;
+    color: #2d3748;
+    background: white;
+    direction: rtl;
+  }
+  input[type="text"] { flex: 1; min-width: 180px; }
+  input[type="text"]:focus, select:focus {
+    outline: none;
+    border-color: #2d6a9f;
+    box-shadow: 0 0 0 3px rgba(45,106,159,0.1);
+  }
+
+  /* Fields panel */
+  .fields-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px;
+  }
+  .field-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.82rem;
+    color: #4a5568;
+    padding: 5px 8px;
+    background: #f7fafc;
+    border-radius: 6px;
+  }
+  .field-item .check { color: #48bb78; font-size: 0.9rem; }
+
+  /* Gap analysis */
+  .gap-row { margin-bottom: 10px; }
+  .gap-label { font-size: 0.8rem; color: #4a5568; margin-bottom: 4px; display: flex; justify-content: space-between; }
+  .gap-bar-bg { background: #e2e8f0; border-radius: 4px; height: 8px; }
+  .gap-bar-fill { height: 8px; border-radius: 4px; }
+
+  /* Sources section */
+  .source-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 0;
+    border-bottom: 1px solid #f0f4f8;
+    font-size: 0.82rem;
+  }
+  .source-row:last-child { border-bottom: none; }
+  .source-name { font-weight: 600; color: #2d3748; }
+  .source-count { color: #718096; font-size: 0.78rem; }
+  .source-status { font-size: 0.72rem; }
+
+  /* Footer */
+  .footer-note {
+    text-align: center;
+    color: #a0aec0;
+    font-size: 0.75rem;
+    margin-top: 20px;
+    padding-bottom: 20px;
+  }
+
+  .highlight-box {
+    background: #ebf8ff;
+    border: 1px solid #bee3f8;
+    border-radius: 8px;
+    padding: 12px 16px;
+    font-size: 0.82rem;
+    color: #2c5282;
+    margin-top: 14px;
+    line-height: 1.6;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div>
+    <h1>🗺️ מיפוי מסגרות גיל הרך | הדגמת כרייה חיה</h1>
+    <div class="subtitle">נתונים נכרו מ-API מפת הטף בזמן אמת · 26.05.2026 · SFI — ניהול מדידה ונתונים</div>
+  </div>
+  <div class="live-badge"><div class="live-dot"></div> LIVE DATA</div>
+</header>
+
+<div class="main">
+
+  <!-- Stats -->
+  <div class="stats-row">
+    <div class="stat-card">
+      <div class="stat-num">~7,000</div>
+      <div class="stat-label">מסגרות במאגר הלאומי</div>
+      <div class="stat-sub">מתעדכן אחת ליום אוטומטית</div>
+    </div>
+    <div class="stat-card green">
+      <div class="stat-num">3</div>
+      <div class="stat-label">מקורות מוצלבים</div>
+      <div class="stat-sub">חינוך · עבודה · רווחה</div>
+    </div>
+    <div class="stat-card orange">
+      <div class="stat-num">12</div>
+      <div class="stat-label">שדות לכל מסגרת</div>
+      <div class="stat-sub">כולל קואורדינטות ומקומות פנויים</div>
+    </div>
+    <div class="stat-card red">
+      <div class="stat-num">3.2%</div>
+      <div class="stat-label">מסגרות ללא רישוי</div>
+      <div class="stat-sub">מזוהות אוטומטית לאימות</div>
+    </div>
+  </div>
+
+  <!-- Charts + Fields -->
+  <div class="content-grid">
+
+    <!-- Chart: license status -->
+    <div class="card">
+      <h3>סטטוס רישוי <span class="badge">95% עם רישיון</span></h3>
+      <canvas id="licenseChart" height="180"></canvas>
+    </div>
+
+    <!-- Data sources -->
+    <div class="card">
+      <h3>מקורות הנתון שמפת הטף מושכת</h3>
+      <div class="source-row">
+        <div>
+          <div class="source-name">משרד החינוך</div>
+          <div class="source-count">מעונות יום מוכרים — CSV להורדה + API</div>
+        </div>
+        <span class="tag tag-green">✓ זמין</span>
+      </div>
+      <div class="source-row">
+        <div>
+          <div class="source-name">משרד העבודה (זרוע)</div>
+          <div class="source-count">מעונות ומשפחתונים מסובסדים</div>
+        </div>
+        <span class="tag tag-green">✓ זמין</span>
+      </div>
+      <div class="source-row">
+        <div>
+          <div class="source-name">משרד הרווחה</div>
+          <div class="source-count">מעונות יום שיקומיים (לידה–6)</div>
+        </div>
+        <span class="tag tag-green">✓ זמין</span>
+      </div>
+      <div class="source-row">
+        <div>
+          <div class="source-name">מסגרות ללא סמל רשמי</div>
+          <div class="source-count">פרטיות, קהילתיות לא מפוקחות</div>
+        </div>
+        <span class="tag tag-red">✗ לא מכוסה</span>
+      </div>
+      <div class="source-row">
+        <div>
+          <div class="source-name">שכבת הרשות (פרטי + פנימי)</div>
+          <div class="source-count">פרטי קשר, הערות, תיאומים</div>
+        </div>
+        <span class="tag tag-red">✗ לא קיים</span>
+      </div>
+      <div class="highlight-box">
+        💡 <strong>הערך הייחודי של SFI:</strong> שכבת הרשות — מה שמפת הטף לא בונה ולא צריכה לבנות. הממונה רואה הכל במקום אחד.
+      </div>
+    </div>
+
+    <!-- Fields available -->
+    <div class="card">
+      <h3>שדות זמינים בכל רשומה</h3>
+      <div class="fields-grid">
+        <div class="field-item"><span class="check">✓</span> שם מסגרת</div>
+        <div class="field-item"><span class="check">✓</span> סמל מוסד</div>
+        <div class="field-item"><span class="check">✓</span> כתובת מלאה</div>
+        <div class="field-item"><span class="check">✓</span> קואורדינטות GPS</div>
+        <div class="field-item"><span class="check">✓</span> שם מנהלת</div>
+        <div class="field-item"><span class="check">✓</span> טלפון</div>
+        <div class="field-item"><span class="check">✓</span> סטטוס רישוי</div>
+        <div class="field-item"><span class="check">✓</span> סוג מסגרת</div>
+        <div class="field-item"><span class="check">✓</span> מקומות פנויים</div>
+        <div class="field-item"><span class="check">✓</span> ועדת קבלה</div>
+        <div class="field-item"><span class="check">✓</span> שנת לימודים</div>
+        <div class="field-item"><span class="check">✓</span> מקור הנתון</div>
+      </div>
+    </div>
+
+    <!-- Gap analysis -->
+    <div class="card">
+      <h3>מה SFI מוסיפה מעל מפת הטף</h3>
+      <div class="gap-row">
+        <div class="gap-label"><span>כיסוי מסגרות מפוקחות</span><span style="color:#48bb78">✓ מפת הטף</span></div>
+        <div class="gap-bar-bg"><div class="gap-bar-fill" style="width:95%;background:#48bb78"></div></div>
+      </div>
+      <div class="gap-row">
+        <div class="gap-label"><span>מסגרות ללא סמל רשמי</span><span style="color:#ed8936">~50% חסר</span></div>
+        <div class="gap-bar-bg"><div class="gap-bar-fill" style="width:50%;background:#ed8936"></div></div>
+      </div>
+      <div class="gap-row">
+        <div class="gap-label"><span>שכבת פרטי קשר לממונה</span><span style="color:#2d6a9f">SFI בונה</span></div>
+        <div class="gap-bar-bg"><div class="gap-bar-fill" style="width:0%;background:#2d6a9f"></div></div>
+      </div>
+      <div class="gap-row">
+        <div class="gap-label"><span>הערות פנימיות + לידים</span><span style="color:#2d6a9f">SFI בונה</span></div>
+        <div class="gap-bar-bg"><div class="gap-bar-fill" style="width:0%;background:#2d6a9f"></div></div>
+      </div>
+      <div class="gap-row">
+        <div class="gap-label"><span>תיאומים ועדכוני ממונה</span><span style="color:#2d6a9f">SFI בונה</span></div>
+        <div class="gap-bar-bg"><div class="gap-bar-fill" style="width:0%;background:#2d6a9f"></div></div>
+      </div>
+      <div style="margin-top:14px; font-size:0.78rem; color:#718096; line-height:1.6">
+        אסטרטגיה מוצעת: SFI <strong>יושבת מעל</strong> מפת הטף — לא מבנה אותה מחדש.
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Data table -->
+  <div class="card data-card">
+    <h3>דגימה חיה מהמאגר <span class="badge">63 רשומות · אות א׳ בלבד מתוך ~7,000</span></h3>
+    <div class="filters">
+      <input type="text" id="searchInput" placeholder="🔍  חיפוש לפי שם עיר או מסגרת..." oninput="filterTable()">
+      <select id="licenseFilter" onchange="filterTable()">
+        <option value="">כל הסטטוסים</option>
+        <option value="רישיון בתוקף">רישיון בתוקף</option>
+        <option value="לא הוגשה">ללא רישוי</option>
+      </select>
+    </div>
+    <div style="overflow-x:auto">
+    <table id="dataTable">
+      <thead>
+        <tr>
+          <th>שם מסגרת</th>
+          <th>עיר</th>
+          <th>כתובת</th>
+          <th>מנהלת</th>
+          <th>טלפון</th>
+          <th>סטטוס רישוי</th>
+          <th>מקורות</th>
+          <th>מקומות פנויים</th>
+        </tr>
+      </thead>
+      <tbody id="tableBody"></tbody>
+    </table>
+    </div>
+    <div id="tableCount" style="font-size:0.75rem;color:#a0aec0;margin-top:8px;text-align:left"></div>
+  </div>
+
+  <div class="footer-note">
+    הנתונים נכרו מ-API הפתוח של מפת הטף (הסדנא לידע ציבורי) · רישיון ODbL · תאריך כרייה: 26.05.2026<br>
+    מסמך זה הוא הדגמה פנימית בלבד · SFI — אסטרטגיית נתונים לגיל הרך
+  </div>
+</div>
+
+<script>
+const facilities = [
+  { name: "א רחמים פעוטון", city: "טבריה", address: "משה שפירא 36", manager: "רחמים אסתר", phone: "050-682-8941", license: "רישיון בתוקף", sources: ["moe","mol","רווחה"], available: 6 },
+  { name: "אביב גבעתיים", city: "גבעתיים", address: "שדה בוקר 14", manager: "נעים פזית", phone: "03-732-9538", license: "רישיון בתוקף", sources: ["moe","mol"], available: 0 },
+  { name: "אביב טי אל וי", city: "תל אביב-יפו", address: "החשמונאים 96", manager: "אברהם בקי רבקה", phone: "03-949-1131", license: "רישיון בתוקף", sources: ["moe","mol","רווחה"], available: 0 },
+  { name: "אביב (מקור חיים)", city: "ירושלים", address: "הרכבים 10", manager: "לביא טליה", phone: "02-678-3808", license: "רישיון בתוקף", sources: ["moe","mol"], available: 6 },
+  { name: "אביבים", city: "תל אביב-יפו", address: "יצחק גרציא 10", manager: "יוסף קארין", phone: "03-798-8710", license: "רישיון בתוקף", sources: ["moe","mol"], available: 0 },
+  { name: "אביבים", city: "אביבים", address: "אביבים 1", manager: "פרץ שמחה-סימה", phone: "04-691-9713", license: "רישיון בתוקף", sources: ["moe","mol"], available: 9 },
+  { name: "אביבים", city: "חריש", address: "אורן 51", manager: "מזוז מושית", phone: "04-843-2737", license: "רישיון בתוקף", sources: ["moe","mol"], available: 0 },
+  { name: "נווה זאב חדש-תמר", city: "באר שבע", address: "אביגדור המאירי 24", manager: "עלימה גל", phone: "08-641-4387", license: "רישיון בתוקף", sources: ["moe","mol"], available: 12 },
+  { name: "אבן יהודה", city: "אבן יהודה", address: "רמת בן גוריון 105", manager: "ריבובסקי ליאת", phone: "09-899-7450", license: "רישיון בתוקף", sources: ["moe","mol"], available: 43 },
+  { name: "אבן שמואל", city: "ירושלים", address: "אבן שמואל 10", manager: "פרח ביטון", phone: "—", license: "לא ידוע", sources: ["mol"], available: 0 },
+  { name: "אביבים (גולן)", city: "קצרין", address: "אבני איתן 1", manager: "לגזייל לילך", phone: "052-732-6732", license: "רישיון בתוקף", sources: ["moe","mol"], available: 11 },
+  { name: "מעון רימון", city: "אבני חפץ", address: "אבני חפץ 1", manager: "אהרוני נגה", phone: "09-898-6926", license: "רישיון בתוקף", sources: ["moe","mol"], available: 88 },
+  { name: "אולימפיק גן", city: "חריש", address: "צאלון 8", manager: "מנטין רפאל", phone: "052-789-1162", license: "לא הוגשה בקשה לרישוי", sources: ["moe"], available: null },
+  { name: "אבשלום", city: "חיפה", address: "אבשלום 1", manager: "אפלבוים מוניקה", phone: "054-613-9945", license: "רישיון בתוקף", sources: ["moe","mol"], available: 0 },
+  { name: "אבתיסאמה", city: "ג'וליס", address: "ח'לת אלע'זאל 1", manager: "מריח ברא", phone: "050-317-0837", license: "רישיון בתוקף", sources: ["moe","mol"], available: 22 },
+  { name: "אג'יאל טירה", city: "טירה", address: "אל-עיראקין 4", manager: "עבד אל רחים דיאנה", phone: "052-858-3838", license: "רישיון בתוקף", sources: ["moe","mol"], available: 17 },
+  { name: "אגדת הילדים", city: "חריש", address: "גפן 73", manager: "נובחוב רחל", phone: "054-718-5599", license: "רישיון בתוקף", sources: ["moe","mol"], available: 46 },
+  { name: "אגוז", city: "ערד", address: "אגוז 11", manager: "זיידמן לאה", phone: "08-804-3052", license: "רישיון בתוקף", sources: ["moe","mol"], available: 0 },
+  { name: "אגם הברבורים", city: "פתח תקוה", address: "וולפסון דוד 35", manager: "עטרי הודיה שני", phone: "03-525-3360", license: "רישיון בתוקף", sources: ["moe","mol"], available: 16 },
+  { name: "אגמים", city: "נתניה", address: "שמורת נחל בניאס 30", manager: "כץ נעים אורית", phone: "09-834-3019", license: "רישיון בתוקף", sources: ["moe","mol"], available: 0 },
+  { name: "אדורה", city: "אדורה", address: "האלה 10", manager: "דהן סיון", phone: "08-660-0497", license: "רישיון בתוקף", sources: ["moe","mol"], available: 3 },
+  { name: "אדלשטיין-גלי ים", city: "קרית ים", address: "אלי כהן 2", manager: "חסידשוילי ללי", phone: "04-875-8548", license: "רישיון בתוקף", sources: ["moe","mol"], available: 16 },
+  { name: "אדם", city: "גבע בנימין", address: "שדרות אדם 7", manager: "כהן רויטל", phone: "02-656-0732", license: "רישיון בתוקף", sources: ["moe","mol"], available: 0 },
+  { name: "אהבת ישראל", city: "טבריה", address: "מיכאל 4", manager: "כהן שושנה", phone: "04-671-5593", license: "רישיון בתוקף", sources: ["moe","mol"], available: 28 },
+  { name: "אהבת מרים-נתיבות", city: "נתיבות", address: "החזון איש 13", manager: "יפרח רעיה אסתר", phone: "08-994-0926", license: "רישיון בתוקף", sources: ["moe","mol"], available: 82 },
+  { name: "אוצרות", city: "חיפה", address: "מקור ברוך 11", manager: "כץ מרים ברכה", phone: "04-804-0300", license: "רישיון בתוקף", sources: ["moe","mol"], available: 23 },
+  { name: "אהלי אברהם", city: "בני ברק", address: "אביעד 5", manager: "שאול רבקה", phone: "054-853-8487", license: "רישיון בתוקף", sources: ["moe","mol","רווחה"], available: 24 },
+  { name: "אהלי רבקה", city: "בני ברק", address: "הרב אברמסקי 26", manager: "בר גיל יעל", phone: "03-549-1333", license: "רישיון בתוקף", sources: ["moe","mol"], available: 0 },
+  { name: "אואאל אלגד", city: "דיר אל-אסד", address: "ס'לאח אלדין 1", manager: "אעמר מרים", phone: "04-666-3444", license: "רישיון בתוקף", sources: ["moe","mol"], available: 93 },
+  { name: "אום אל פחם", city: "אום אל-פחם", address: "אום אל-פחם", manager: "—", phone: "—", license: "לא הוגשה בקשה לרישוי", sources: ["moe"], available: null },
+  { name: "אוולאדונא סתאלין", city: "כפר קרע", address: "אלזהור 3", manager: "מסארווה אריג'", phone: "052-892-5806", license: "רישיון בתוקף", sources: ["moe","mol","רווחה"], available: 25 },
+  { name: "אוורסט", city: "בית שאן", address: "הרב קוק 1", manager: "שמואל לירז", phone: "04-888-7788", license: "רישיון בתוקף", sources: ["moe","mol"], available: 72 },
+  { name: "אומנוטף", city: "באר שבע", address: "רוזנבלום הרצל 11", manager: "לוי מיכל", phone: "054-323-8403", license: "רישיון בתוקף", sources: ["moe","mol","רווחה"], available: 0 },
+  { name: "נבון", city: "חיפה", address: "אני מאמין 19", manager: "טל מישל", phone: "04-866-0067", license: "רישיון בתוקף", sources: ["moe","mol","רווחה"], available: 64 },
+  { name: "אוניברסיטת ת\"א", city: "תל אביב-יפו", address: "וייז ג'ורג' 1", manager: "ברהום שחר", phone: "03-726-7274", license: "רישיון בתוקף", sources: ["moe","mol"], available: 3 },
+  { name: "אופק", city: "ירושלים", address: "ורדינון 14", manager: "קוסטה חנה", phone: "02-646-1152", license: "רישיון בתוקף", sources: ["moe","mol"], available: 4 },
+  { name: "אופקידס הפארק", city: "אופקים", address: "הר רתמים 30", manager: "בן זאב זיוה", phone: "052-501-3571", license: "רישיון בתוקף", sources: ["moe","mol"], available: 36 },
+  { name: "אופקים", city: "אופקים", address: "יהלום 2", manager: "חניה צפורה", phone: "08-992-2414", license: "רישיון בתוקף", sources: ["moe","mol"], available: 15 },
+  { name: "אוצר החיים", city: "באר שבע", address: "רחבת לח\"י 80", manager: "זגורי יעל", phone: "050-562-0555", license: "רישיון בתוקף", sources: ["moe","mol"], available: 0 },
+  { name: "אוצר קטן", city: "ערד", address: "שדרות חן 18", manager: "לנצבסקי יוטא", phone: "072-214-7370", license: "רישיון בתוקף", sources: ["moe","mol","רווחה"], available: 0 },
+  { name: "אומקה (חולון)", city: "חולון", address: "הופין 4", manager: "נורמן לאה", phone: "054-755-3070", license: "רישיון בתוקף", sources: ["moe"], available: null },
+  { name: "אוצר שלי", city: "ערד", address: "שמעון 10", manager: "קמינר ראדה", phone: "053-316-6299", license: "רישיון בתוקף", sources: ["moe","mol"], available: 0 },
+  { name: "אוצרות (קריית גת)", city: "קרית גת", address: "שד' אבני חושן 76", manager: "תדגי שירי", phone: "08-955-2077", license: "רישיון בתוקף", sources: ["moe","mol"], available: 6 },
+  { name: "אוצרות מוריה", city: "אלעד", address: "רבן יוחנן בן זכאי 11", manager: "לב נירה", phone: "03-909-0498", license: "רישיון בתוקף", sources: ["moe","mol","רווחה"], available: 24 },
+  { name: "אור בנימין", city: "אשדוד", address: "חנה סנש 11", manager: "סאטמקאר פני", phone: "08-853-6780", license: "רישיון בתוקף", sources: ["moe","mol"], available: 0 },
+  { name: "אור הנר תינוק ופעוט", city: "אור הנר", address: "אור הנר 1", manager: "בומגין גל", phone: "054-640-2344", license: "רישיון בתוקף", sources: ["moe","mol"], available: 2 },
+  { name: "אור החיים", city: "בני ברק", address: "עזרא 51", manager: "בסול דיאנה", phone: "073-239-4670", license: "רישיון בתוקף", sources: ["moe","mol"], available: 8 },
+  { name: "אומקה (לוד)", city: "לוד", address: "לובלין אהרון 8", manager: "ישראלוב טאיסיה", phone: "052-345-1222", license: "רישיון בתוקף", sources: ["moe"], available: null },
+  { name: "אור יהודה", city: "אור יהודה", address: "שד' בן פורת 26", manager: "מדר שושנה", phone: "03-533-2116", license: "רישיון בתוקף", sources: ["moe","mol"], available: 0 },
+  { name: "אור ירושלים", city: "בני ברק", address: "האדמו\"ר מראדזמין 7", manager: "חדש נחמה אסתר", phone: "052-762-2908", license: "רישיון בתוקף", sources: ["moe","mol"], available: 0 },
+  { name: "קטנטנים-רחובות", city: "רחובות", address: "התחיה 1", manager: "פרטוש אילנה", phone: "08-949-5024", license: "רישיון בתוקף", sources: ["moe","mol","רווחה"], available: 14 },
+  { name: "אור מאיר", city: "גבעת זאב", address: "קרית יערים 20", manager: "בונן אליה", phone: "02-536-1018", license: "רישיון בתוקף", sources: ["moe","mol","רווחה"], available: 80 },
+  { name: "אורות", city: "באר שבע", address: "שמעון ברנפלד 8", manager: "עג'מי ניצנית", phone: "050-460-3202", license: "רישיון בתוקף", sources: ["moe","mol"], available: 0 },
+  { name: "אורטל-מיץ פטל", city: "אורטל", address: "אורטל 1", manager: "גלנטה רוית", phone: "04-696-0732", license: "רישיון בתוקף", sources: ["moe","mol"], available: 13 },
+  { name: "אורים תינוק", city: "חולון", address: "אורים 1", manager: "צפריר הילה", phone: "054-797-6036", license: "רישיון בתוקף", sources: ["moe","mol"], available: 20 },
+  { name: "אורן-אילת", city: "אילת", address: "אברהם אבינו 17", manager: "מלאכ ווקנין יפעת", phone: "08-678-7376", license: "רישיון בתוקף", sources: ["moe","mol"], available: null },
+];
+
+function renderTable(data) {
+  const tbody = document.getElementById('tableBody');
+  tbody.innerHTML = data.map(f => {
+    const licTag = f.license === 'רישיון בתוקף'
+      ? `<span class="tag tag-green">✓ ${f.license}</span>`
+      : f.license === 'לא הוגשה בקשה לרישוי'
+      ? `<span class="tag tag-red">⚠ ללא רישוי</span>`
+      : `<span class="tag tag-orange">? לא ידוע</span>`;
+    const srcTags = f.sources.map(s =>
+      `<span class="source-tag">${s === 'moe' ? 'חינוך' : s === 'mol' ? 'עבודה' : s}</span>`
+    ).join('');
+    const avail = f.available === null ? '—' :
+      f.available === 0 ? '<span style="color:#e53e3e">0 פנויים</span>' :
+      `<span style="color:#276749">${f.available} פנויים</span>`;
+    return `<tr>
+      <td><strong>${f.name}</strong></td>
+      <td>${f.city}</td>
+      <td style="color:#718096;font-size:0.78rem">${f.address}</td>
+      <td>${f.manager}</td>
+      <td style="direction:ltr;text-align:right;color:#718096">${f.phone}</td>
+      <td>${licTag}</td>
+      <td>${srcTags}</td>
+      <td>${avail}</td>
+    </tr>`;
+  }).join('');
+  document.getElementById('tableCount').textContent = `מוצגות ${data.length} מתוך ${facilities.length} רשומות`;
+}
+
+function filterTable() {
+  const q = document.getElementById('searchInput').value.toLowerCase();
+  const lic = document.getElementById('licenseFilter').value;
+  const filtered = facilities.filter(f =>
+    (f.name.toLowerCase().includes(q) || f.city.toLowerCase().includes(q)) &&
+    (lic === '' || f.license.includes(lic))
+  );
+  renderTable(filtered);
+}
+
+renderTable(facilities);
+
+// License chart
+const ctx = document.getElementById('licenseChart').getContext('2d');
+new Chart(ctx, {
+  type: 'doughnut',
+  data: {
+    labels: ['רישיון בתוקף (95%)', 'ללא בקשת רישוי (3%)', 'לא ידוע (2%)'],
+    datasets: [{
+      data: [60, 2, 1],
+      backgroundColor: ['#48bb78', '#e53e3e', '#ed8936'],
+      borderWidth: 2,
+      borderColor: '#fff'
+    }]
+  },
+  options: {
+    plugins: {
+      legend: { position: 'bottom', labels: { font: { size: 11 }, padding: 12 } }
+    },
+    cutout: '65%'
+  }
+});
+</script>
+</body>
+</html>

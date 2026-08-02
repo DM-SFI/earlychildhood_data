@@ -1,0 +1,493 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>היתכנות טכנית — כלי מיפוי מסגרות לגיל הרך</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Segoe UI', Arial, sans-serif;
+      background: #f5f6f8;
+      color: #1a1a2e;
+      line-height: 1.7;
+      font-size: 15px;
+    }
+
+    /* ── Header ── */
+    .page-header {
+      background: linear-gradient(135deg, #1a3a5c 0%, #2d6a9f 100%);
+      color: #fff;
+      padding: 40px 48px 32px;
+    }
+    .page-header h1 { font-size: 1.9rem; font-weight: 700; margin-bottom: 6px; }
+    .page-header .sub { font-size: 1rem; opacity: .8; margin-bottom: 18px; }
+    .meta-badges { display: flex; gap: 12px; flex-wrap: wrap; }
+    .badge {
+      background: rgba(255,255,255,.15);
+      border: 1px solid rgba(255,255,255,.3);
+      border-radius: 20px;
+      padding: 4px 14px;
+      font-size: .82rem;
+    }
+
+    /* ── Layout ── */
+    .container { max-width: 980px; margin: 0 auto; padding: 36px 24px 60px; }
+
+    /* ── TOC ── */
+    .toc {
+      background: #fff;
+      border-radius: 10px;
+      padding: 22px 28px;
+      margin-bottom: 32px;
+      box-shadow: 0 1px 4px rgba(0,0,0,.08);
+    }
+    .toc h2 { font-size: .9rem; color: #666; margin-bottom: 12px; text-transform: uppercase; letter-spacing: .05em; }
+    .toc ol { padding-right: 20px; }
+    .toc li { margin-bottom: 6px; }
+    .toc a { color: #2d6a9f; text-decoration: none; font-size: .93rem; }
+    .toc a:hover { text-decoration: underline; }
+
+    /* ── Sections ── */
+    .section {
+      background: #fff;
+      border-radius: 10px;
+      padding: 32px 36px;
+      margin-bottom: 24px;
+      box-shadow: 0 1px 4px rgba(0,0,0,.08);
+    }
+    .section-title {
+      font-size: 1.2rem;
+      font-weight: 700;
+      color: #1a3a5c;
+      border-bottom: 2px solid #e8f0f8;
+      padding-bottom: 10px;
+      margin-bottom: 20px;
+    }
+    .section-title .num {
+      display: inline-block;
+      background: #2d6a9f;
+      color: #fff;
+      border-radius: 50%;
+      width: 28px;
+      height: 28px;
+      line-height: 28px;
+      text-align: center;
+      font-size: .85rem;
+      margin-left: 10px;
+    }
+    h3 {
+      font-size: 1rem;
+      color: #2d6a9f;
+      margin: 22px 0 10px;
+      font-weight: 700;
+    }
+    p { margin-bottom: 12px; }
+    ul, ol { padding-right: 22px; margin-bottom: 12px; }
+    li { margin-bottom: 5px; }
+    strong { color: #1a3a5c; }
+    a { color: #2d6a9f; }
+
+    /* ── Architecture diagram ── */
+    .arch-diagram {
+      background: #f0f5fb;
+      border: 1px solid #c8ddf0;
+      border-radius: 8px;
+      padding: 20px 24px;
+      margin: 16px 0;
+      font-family: 'Courier New', monospace;
+      font-size: .82rem;
+      line-height: 1.8;
+      white-space: pre;
+      overflow-x: auto;
+      color: #1a3a5c;
+      direction: ltr;
+      text-align: left;
+    }
+
+    /* ── Tables ── */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 16px 0;
+      font-size: .9rem;
+    }
+    thead { background: #1a3a5c; color: #fff; }
+    th { padding: 10px 14px; font-weight: 600; text-align: right; }
+    td { padding: 9px 14px; border-bottom: 1px solid #eaedf2; }
+    tr:last-child td { border-bottom: none; }
+    tr:nth-child(even) td { background: #f7f9fc; }
+
+    /* ── Option cards ── */
+    .option-card {
+      border: 1px solid #dce6f0;
+      border-radius: 8px;
+      padding: 20px 24px;
+      margin-bottom: 16px;
+    }
+    .option-card.ideal { border-right: 4px solid #2d9f6a; }
+    .option-card.pragmatic { border-right: 4px solid #2d6a9f; }
+    .option-card.pilot { border-right: 4px solid #9f7a2d; }
+    .option-tag {
+      display: inline-block;
+      font-size: .75rem;
+      font-weight: 700;
+      padding: 2px 10px;
+      border-radius: 12px;
+      margin-bottom: 10px;
+      text-transform: uppercase;
+      letter-spacing: .04em;
+    }
+    .tag-ideal { background: #e6f7ef; color: #1a7a4a; }
+    .tag-pragmatic { background: #e6eef7; color: #1a4a7a; }
+    .tag-pilot { background: #f7f2e6; color: #7a5a1a; }
+
+    /* ── Callouts ── */
+    .callout {
+      border-radius: 8px;
+      padding: 14px 18px;
+      margin: 16px 0;
+      font-size: .9rem;
+    }
+    .callout-warning { background: #fff8e6; border-right: 4px solid #f0a500; }
+    .callout-critical { background: #fff0f0; border-right: 4px solid #d94040; }
+    .callout-tip { background: #e6f7ef; border-right: 4px solid #2d9f6a; }
+    .callout-info { background: #e6eef7; border-right: 4px solid #2d6a9f; }
+    .callout strong { display: block; margin-bottom: 4px; }
+
+    /* ── Risk table colors ── */
+    .risk-high { color: #c0392b; font-weight: 700; }
+    .risk-med { color: #e67e22; font-weight: 700; }
+    .risk-low { color: #27ae60; font-weight: 700; }
+    .rec-yes { color: #27ae60; font-weight: 700; }
+    .rec-maybe { color: #e67e22; font-weight: 700; }
+    .rec-no { color: #c0392b; font-weight: 700; }
+
+    /* ── Footer ── */
+    .page-footer {
+      text-align: center;
+      font-size: .8rem;
+      color: #888;
+      margin-top: 40px;
+      padding-top: 20px;
+      border-top: 1px solid #dde3ea;
+    }
+
+    /* ── Milestone timeline ── */
+    .timeline { margin: 16px 0; }
+    .timeline-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 14px;
+      margin-bottom: 14px;
+    }
+    .week-badge {
+      background: #2d6a9f;
+      color: #fff;
+      border-radius: 6px;
+      padding: 3px 10px;
+      font-size: .8rem;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+    .timeline-text { font-size: .9rem; padding-top: 2px; }
+
+    @media (max-width: 600px) {
+      .page-header { padding: 24px 18px; }
+      .section { padding: 20px 16px; }
+      .container { padding: 20px 12px 40px; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="page-header">
+  <h1>היתכנות טכנית — כלי מיפוי מסגרות לגיל הרך</h1>
+  <div class="sub">מסמך חשיבה לצרכים פנימיים</div>
+  <div class="meta-badges">
+    <span class="badge">📋 טיוטה לדיון</span>
+    <span class="badge">📅 מאי 2026</span>
+    <span class="badge">🔒 לא להפצה חיצונית</span>
+    <span class="badge">SFI Data &amp; Measurement</span>
+  </div>
+</div>
+
+<div class="container">
+
+  <!-- TOC -->
+  <div class="toc">
+    <h2>תוכן עניינים</h2>
+    <ol>
+      <li><a href="#s1">מה המוצר בעצם</a></li>
+      <li><a href="#s2">ארכיטקטורת הנתונים — הפרדת שכבות</a></li>
+      <li><a href="#s3">תשתית ואירוח — שלוש אפשרויות</a></li>
+      <li><a href="#s4">תחזוקה ואחריות</a></li>
+      <li><a href="#s5">מקורות נתונים — מה זמין ואיך</a></li>
+      <li><a href="#s6">רגולציה — מה ידוע, מה לא</a></li>
+      <li><a href="#s7">עלויות — פירוט</a></li>
+      <li><a href="#s8">MVP לפיילוט</a></li>
+      <li><a href="#s9">גורמי סיכון</a></li>
+      <li><a href="#s10">המלצות לשלב הבא</a></li>
+    </ol>
+  </div>
+
+  <!-- 1 -->
+  <div class="section" id="s1">
+    <div class="section-title"><span class="num">1</span> מה המוצר בעצם</div>
+    <p>המוצר הוא שלושה דברים שונים — שכל אחד מהם עומד בפני עצמו, אבל יחד הם יוצרים את הערך:</p>
+    <h3>א. מאגר הנתונים (Dataset)</h3>
+    <p>מאגר מסגרות גיל הרך ברמה ארצית ורשותית — שמות, כתובות, סוגי רישוי, מקורות. זה הליבה של המוצר. ללא מאגר מעודכן ואמין, אין ערך לשאר. המאגר עצמו הוא תוצר — ניתן להפיצו, לפרסמו, ולעדכנו באופן עצמאי.</p>
+    <h3>ב. פייפליין איסוף (Backend)</h3>
+    <p>קוד שרץ ברקע — מושך נתונים ממקורות שונים, מנקה, מזהה כפילויות, ומאחסן. הוא מה שמחזיק את המאגר מעודכן. צריך לרוץ על שרת כלשהו.</p>
+    <h3>ג. דשבורד ניהולי (Frontend)</h3>
+    <p>הממשק שהממונה ברשות רואה ומשתמשת בו — רשימת מסגרות, לידים לאימות, סטטוסים, דוחות. זה שכבת השימוש.</p>
+    <div class="callout callout-info">שלושת הרכיבים דורשים מיומנויות ותשתיות שונות, אך מתפתחים במקביל — הפייפליין מזין את המאגר, המאגר מזין גם את הדשבורד וגם יכול לשמש כתוצר עצמאי.</div>
+  </div>
+
+  <!-- 2 -->
+  <div class="section" id="s2">
+    <div class="section-title"><span class="num">2</span> ארכיטקטורת הנתונים — הפרדת שכבות</div>
+    <p>הרעיון המרכזי: <strong>SFI מחזיקה רק נתונים ציבוריים. הרשות מחברת אליהם את נתוני הפרט שבבעלותה.</strong></p>
+
+    <p><strong>שכבה א׳ — SFI (נתונים ציבוריים בלבד):</strong> שם המסגרת, כתובת, סוג רישוי, מקור הנתון, מזהה ייחודי. כל זה מגיע ממקורות פתוחים — משרד החינוך, זרוע העבודה, govmap. אין כאן שום מידע אישי.</p>
+
+    <p><strong>שכבה ב׳ — הרשות (נתוני פרט):</strong> פרטי קשר של מנהלת המסגרת, הערות פנימיות, תאריך תיאום אחרון. שכבה זו נשארת אצל הרשות בלבד — על SharePoint או Excel קיים — ואינה עוברת ל-SFI.</p>
+
+    <p>שתי השכבות מחוברות דרך <strong>מפתח משותף</strong>: סמל המוסד הרשמי למסגרות מוכרות, או מזהה פנימי שמוקצה למסגרות ללא סמל. הדשבורד של הממונה מציג את שתיהן יחד.</p>
+
+    <div class="callout callout-tip"><strong>✅ היתרון המרכזי</strong> SFI לא נוגעת בנתונים אישיים כלל — חוק הגנת הפרטיות לא חל על השכבה שלה. הרשות שולטת בנתוני הפרט שלה לחלוטין, ואינה תלויה ב-SFI לגביהם. ניתן לפעול גם ללא הצטרפות הרשות — הנתונים הציבוריים זמינים ממילא.</div>
+  </div>
+
+  <!-- 3 -->
+  <div class="section" id="s3">
+    <div class="section-title"><span class="num">3</span> תשתית ואירוח — שלוש אפשרויות</div>
+
+    <div class="option-card ideal">
+      <span class="option-tag tag-ideal">אידאלי</span>
+      <h3>אפשרות א׳ — מערכת מוטמעת ברשות</h3>
+      <p>המערכת יושבת על חשבון הענן של הרשות (Azure). הרשות היא הבעלים המלאים — נתונים, שרת, גישה.</p>
+      <table>
+        <tr><td><strong>תשתית</strong></td><td>Azure של הרשות (דרך Office 365 קיים)</td></tr>
+        <tr><td><strong>בעלות</strong></td><td>הרשות — מלאה</td></tr>
+        <tr><td><strong>עלות שוטפת</strong></td><td>$30–80/חודש לרשות</td></tr>
+        <tr><td><strong>מי מתחזק</strong></td><td>IT של הרשות + תמיכה מ-SFI</td></tr>
+        <tr><td><strong>מתאים ל</strong></td><td>רשויות גדולות עם IT פעיל</td></tr>
+      </table>
+      <div class="callout callout-warning"><strong>⚠️ חסם</strong> רוב הרשויות אין להן IT שיכול לנהל את זה. גם כשיש — צריך אישורים פנימיים להקמת שירות חדש בסביבה שלהם.</div>
+    </div>
+
+    <div class="option-card pragmatic">
+      <span class="option-tag tag-pragmatic">פרגמטי</span>
+      <h3>אפשרות ב׳ — SFI מחזיקה תשתית משותפת</h3>
+      <p>SFI מקימה סביבת ענן אחת. כל רשות מקבלת מרחב מבודד — הנתונים לא מעורבבים, אבל השרת משותף. SFI היא "ועד הבית".</p>
+      <table>
+        <tr><td><strong>תשתית</strong></td><td>Azure / AWS בניהול SFI</td></tr>
+        <tr><td><strong>בעלות</strong></td><td>חוזית — הרשות | פיזית — SFI</td></tr>
+        <tr><td><strong>עלות שוטפת</strong></td><td>$100–300/חודש (כלל הרשויות)</td></tr>
+        <tr><td><strong>מי מתחזק</strong></td><td>SFI (או פרילנסר מטעמה)</td></tr>
+        <tr><td><strong>מתאים ל</strong></td><td>פיילוט, רשויות קטנות-בינוניות</td></tr>
+      </table>
+      <div class="callout callout-tip"><strong>✅ יתרון</strong> הרשות לא צריכה לדעת DevOps. הכניסה קלה.</div>
+      <div class="callout callout-warning"><strong>⚠️ חסם</strong> מי מממן? מה קורה אם SFI עוצרת?</div>
+    </div>
+
+    <div class="option-card pilot">
+      <span class="option-tag tag-pilot">פיילוט בלבד</span>
+      <h3>אפשרות ג׳ — שירות מנוהל (No-Code)</h3>
+      <p>מסד נתונים כמו Supabase / Airtable — חברה צד-שלישי מנהלת הכל. SFI רק מגדירה את הנתונים.</p>
+      <table>
+        <tr><td><strong>תשתית</strong></td><td>Supabase / Airtable (ענן חיצוני)</td></tr>
+        <tr><td><strong>בעלות</strong></td><td>חברה חיצונית</td></tr>
+        <tr><td><strong>עלות שוטפת</strong></td><td>$0–50/חודש</td></tr>
+        <tr><td><strong>מי מתחזק</strong></td><td>אף אחד (managed)</td></tr>
+        <tr><td><strong>מתאים ל</strong></td><td>פיילוט ראשוני בלבד</td></tr>
+      </table>
+      <div class="callout callout-warning"><strong>⚠️ לא מתאים לטווח ארוך</strong> נתונים אצל חברה אמריקאית, מוגבל בגמישות.</div>
+    </div>
+  </div>
+
+  <!-- 4 -->
+  <div class="section" id="s4">
+    <div class="section-title"><span class="num">4</span> תחזוקה ואחריות — השאלה הפחות נוצצת והכי קריטית</div>
+    <h3>מה דורש תחזוקה שוטפת</h3>
+    <ul>
+      <li>כש-API חיצוני משתנה — הפייפליין נשבר וצריך תיקון</li>
+      <li>כשרשות מתנתקת או מצטרפת — צריך הגדרה</li>
+      <li>עדכוני אבטחה לשרת — אחת לחודש בערך</li>
+      <li>ניטור — לדעת שהמערכת עובדת</li>
+    </ul>
+    <p>זה לא עבודה של משרה מלאה, אבל זה גם לא אפס. מדובר על כמה שעות בשבוע, עם spikes כשמשהו מתפרק.</p>
+    <h3>מי יכול להחזיק</h3>
+    <table>
+      <thead><tr><th>מודל</th><th>עלות/חודש</th><th>הערות</th></tr></thead>
+      <tbody>
+        <tr><td>מפתח/ת פנימי/ת ב-SFI — משרה מלאה</td><td>₪25,000–35,000/חודש (~$115,000–160,000/שנה כולל מעסיק)</td><td>הכי טוב לאיכות, דורש גיוס ייעודי</td></tr>
+        <tr><td>מפתח/ת פנימי/ת ב-SFI — חלקית (50%)</td><td>₪12,000–17,000/חודש</td><td>ריאלי אם יש עובד/ת מתאים/ה בארגון</td></tr>
+        <tr><td>פרילנסר על retainer</td><td>$500–1,500/חודש</td><td>גמיש, אבל תלות בגורם חיצוני ואין continuity</td></tr>
+        <tr><td>גוף ממשלתי (תהל"א / מערך הדיגיטל)</td><td>—</td><td>ריאלי רק בסקייל גדול ולאחר הוכחת היתכנות</td></tr>
+      </tbody>
+    </table>
+    <div class="callout callout-critical"><strong>⚠️ סיכון מרכזי</strong> הדבר שהכי מוריד פרויקטים כאלה הוא לא בניית המוצר — אלא היעדר בעלות ברורה אחרי שנבנה. <strong>חייב להיות מוגדר לפני תחילת פיתוח.</strong></div>
+  </div>
+
+  <!-- 5 -->
+  <div class="section" id="s5">
+    <div class="section-title"><span class="num">5</span> מקורות נתונים — מה זמין ואיך</div>
+
+    <h3>מפת הטף — שחקן קיים בשוק</h3>
+    <p>קיים כלי בשם מפת הטף (של הסדנא לידע ציבורי) שפועל בתחום זה — עם נתוני מסגרות ממשרדי ממשלה וממשק לרשויות. יש לבחון את היקף הכיסוי שלהם, האם הם מכסים מסגרות ללא סמל רשמי, ומה הפער בין הכלי שלהם לצרכים של SFI ולקוחותיה.</p>
+    <p>להם <strong>API פתוח</strong> — ראוי לבחון אותו טכנית: מה הוא מחזיר, מה לא, האם הנתונים עדכניים ומלאים דיים. בחינת ה-API היא צעד מחקרי ולא התחייבות — והיא עשויה לחסוך עבודת פיתוח משמעותית אם הנתונים טובים, <em>או</em> לאשש שנדרש מקור עצמאי אם הם לא.</p>
+    <div class="callout callout-warning"><strong>⚠️ שאלה אסטרטגית שיש לנסח לפני פיתוח</strong> מה SFI בונה שלא קיים כבר? מהו ה-unique value ביחס לפתרונות קיימים בשוק — בממשק, בעומק הנתונים, בשכבת הניתוח, או בהתאמה לצרכי הרשות?</div>
+
+    <h3>Google Places API — מקור משלים לגיטימי</h3>
+    <table>
+      <thead><tr><th>פרמטר</th><th>פרטים</th></tr></thead>
+      <tbody>
+        <tr><td>סוג גישה</td><td>API רשמי — לגיטימי לחלוטין</td></tr>
+        <tr><td>נתונים מתקבלים</td><td>שם, כתובת, טלפון, אתר, שעות פתיחה</td></tr>
+        <tr><td>עלות לפיילוט</td><td>~$10 לרשות אחת</td></tr>
+        <tr><td>מגבלה</td><td>אין סיווג רישוי רשמי, לא כל מסגרת רשומה</td></tr>
+        <tr><td>המלצה</td><td><span class="rec-yes">✅ מקור משלים — לגילוי, לא לאימות</span></td></tr>
+      </tbody>
+    </table>
+
+    <h3>סיכום כל המקורות</h3>
+    <table>
+      <thead><tr><th>מקור</th><th>סוג גישה</th><th>אמינות</th><th>מורכבות</th><th>המלצה</th></tr></thead>
+      <tbody>
+        <tr><td>מפת הטף</td><td>שחקן קיים — לבחון פערים</td><td>—</td><td>—</td><td><span class="rec-maybe">🟡 לנתח אסטרטגית</span></td></tr>
+        <tr><td>משרד החינוך</td><td>CSV להורדה</td><td>גבוהה</td><td>נמוכה</td><td><span class="rec-yes">✅ מקור ראשוני</span></td></tr>
+        <tr><td>Google Places</td><td>API רשמי</td><td>בינונית</td><td>נמוכה</td><td><span class="rec-yes">✅ משלים</span></td></tr>
+        <tr><td>זרוע העבודה</td><td>לא ברור</td><td>גבוהה</td><td>לא ידוע</td><td><span class="rec-maybe">🟡 לבדוק</span></td></tr>
+        <tr><td>אתרי רשויות</td><td>Scraping</td><td>משתנה</td><td>גבוהה</td><td><span class="rec-maybe">⚠️ לא כדאי בסקייל</span></td></tr>
+        <tr><td>Facebook</td><td>Scraping</td><td>נמוכה</td><td>גבוהה + משפטי</td><td><span class="rec-no">❌ להוציא מסקופ</span></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- 6 -->
+  <div class="section" id="s6">
+    <div class="section-title"><span class="num">6</span> רגולציה — מה ידוע, מה לא ידוע</div>
+    <h3>מה ידוע</h3>
+    <table>
+      <thead><tr><th>נושא</th><th>מצב</th></tr></thead>
+      <tbody>
+        <tr><td>נתונים ציבוריים (שם, כתובת, רישוי)</td><td><span class="rec-yes">✅ אין מגבלה — נתונים פתוחים</span></td></tr>
+        <tr><td>נתוני פרט (פרטי קשר)</td><td><span class="rec-maybe">⚠️ חוק הגנת הפרטיות — נפתר אם נשאר ברשות בלבד</span></td></tr>
+        <tr><td>SFI כ"מעבד מידע"</td><td><span class="rec-maybe">⚠️ אם SFI מחזיקה נתוני פרט — נדרש הסכם עיבוד נתונים</span></td></tr>
+      </tbody>
+    </table>
+    <h3>שאלות פתוחות</h3>
+    <table>
+      <thead><tr><th>שאלה</th><th>למי לשאול</th></tr></thead>
+      <tbody>
+        <tr><td>האם אימוץ הכלי ע"י רשות מחייב מכרז? (תלוי בעלות ובצורת ההתקשרות)</td><td>Aor ממערך הדיגיטל</td></tr>
+        <tr><td>אם SFI ממומנת ממשלתית ונותנת את הכלי בחינם — האם עדיין נדרש מכרז?</td><td>ייעוץ משפטי</td></tr>
+        <tr><td>האם קיימים תקני Digital Israel שרשות חייבת לעמוד בהם?</td><td>Aor / תהל"א</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- 7 -->
+  <div class="section" id="s7">
+    <div class="section-title"><span class="num">7</span> עלויות — פירוט</div>
+    <h3>פיתוח</h3>
+    <table>
+      <thead><tr><th>רכיב</th><th>הערכת זמן</th><th>הערות</th></tr></thead>
+      <tbody>
+        <tr><td>פייפליין MVP (מקור אחד)</td><td>2–3 שבועות</td><td>עם Claude Code — ריאלי מאוד</td></tr>
+        <tr><td>פייפליין מלא (3–4 מקורות)</td><td>2–3 חודשים</td><td>כולל NLP לקהילתיים</td></tr>
+        <tr><td>דשבורד MVP</td><td>2–3 שבועות</td><td>הבסיס כבר קיים</td></tr>
+        <tr><td>דשבורד מלא</td><td>חודש–חודשיים</td><td>כולל לידים, הרשאות</td></tr>
+        <tr><td><strong>סה"כ MVP לפיילוט</strong></td><td><strong>~חודש–חודשיים</strong></td><td>פנימי עם AI tools</td></tr>
+        <tr><td><strong>סה"כ מוצר מלא</strong></td><td><strong>3–6 חודשים</strong></td><td>תלוי בהיקף</td></tr>
+      </tbody>
+    </table>
+    <div class="callout callout-info">עם Claude Code ופיתוח פנימי — העלות היא בעיקר <strong>זמן</strong>, לא כסף ישיר. פרילנסר חיצוני: $10,000–20,000 ל-MVP.</div>
+    <h3>תשתית שוטפת</h3>
+    <table>
+      <thead><tr><th>שלב</th><th>עלות/חודש</th></tr></thead>
+      <tbody>
+        <tr><td>פיילוט (1–2 רשויות)</td><td>$30–80</td></tr>
+        <tr><td>סקייל בינוני (10–20 רשויות)</td><td>$150–300</td></tr>
+        <tr><td>ארצי</td><td>$500–1,000</td></tr>
+      </tbody>
+    </table>
+    <h3>תחזוקה שוטפת</h3>
+    <table>
+      <thead><tr><th>מודל</th><th>עלות/חודש</th></tr></thead>
+      <tbody>
+        <tr><td>פנימי (שעות חלקיות)</td><td>עלות שקועה</td></tr>
+        <tr><td>פרילנסר retainer</td><td>$500–1,500</td></tr>
+        <tr><td>חברת תמיכה</td><td>$2,000+</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- 8 -->
+  <div class="section" id="s8">
+    <div class="section-title"><span class="num">8</span> MVP לפיילוט — מה בדיוק בונים</div>
+    <p><strong>מטרה:</strong> להוכיח שאפשר למשוך נתונים אמיתיים, לנקות אותם, ולהציג אותם בדשבורד שימושי — לפני שמשקיעים בהרחבה.</p>
+    <h3>היקף</h3>
+    <ul>
+      <li>רשות אחת בלבד (חדרה או קריית אתא — יש שם נתוני בסיס)</li>
+      <li>מקור אחד רשמי (קובץ משרד החינוך / נתוני מפת הטף)</li>
+      <li>מקור אחד קהילתי — חצי-ידני, לא אוטומציה מלאה</li>
+      <li>דשבורד בסיסי — רשימה + פילטרים + סטטוס</li>
+    </ul>
+    <h3>מה ה-MVP לא כולל</h3>
+    <ul>
+      <li>❌ זיהוי כפילויות אוטומטי מלא</li>
+      <li>❌ NLP לסריקת Facebook</li>
+      <li>❌ מערכת לידים מלאה</li>
+      <li>❌ מנגנון עדכון אוטומטי</li>
+      <li>❌ רב-רשויות</li>
+    </ul>
+    <h3>לוח זמנים מוצע</h3>
+    <div class="timeline">
+      <div class="timeline-item"><span class="week-badge">שבוע 1</span><span class="timeline-text">סקריפט משיכה ממקור רשמי + הכנסה ל-DB</span></div>
+      <div class="timeline-item"><span class="week-badge">שבוע 2–3</span><span class="timeline-text">חיבור דשבורד לנתונים אמיתיים</span></div>
+      <div class="timeline-item"><span class="week-badge">שבוע 4</span><span class="timeline-text">פיילוט עם ממונה ברשות — משוב</span></div>
+      <div class="timeline-item"><span class="week-badge">שבוע 5–6</span><span class="timeline-text">תיקונים + תיעוד</span></div>
+    </div>
+  </div>
+
+  <!-- 9 -->
+  <div class="section" id="s9">
+    <div class="section-title"><span class="num">9</span> גורמי סיכון</div>
+    <table>
+      <thead><tr><th>סיכון</th><th>רמה</th><th>הערה</th></tr></thead>
+      <tbody>
+        <tr><td>גישה ל-API ממשרד החינוך</td><td><span class="risk-med">🟡 בינוני</span></td><td>אולי רק CSV להורדה, לא API אמיתי</td></tr>
+        <tr><td>גישה לנתוני זרוע העבודה</td><td><span class="risk-high">🔴 גבוה</span></td><td>לא ברור אם פתוח</td></tr>
+        <tr><td>NLP לסריקת Facebook</td><td><span class="risk-high">🔴 גבוה</span></td><td>מורכב ויקר, כדאי לדחות</td></tr>
+        <tr><td>Facebook scraping — חוקיות</td><td><span class="risk-high">🔴 גבוה</span></td><td>ToS של Facebook אוסרים — להוציא מסקופ</td></tr>
+        <tr><td>מי מתחזק לאחר פיתוח</td><td><span class="risk-high">🔴 גבוה</span></td><td>חייב להיות מוגדר מראש</td></tr>
+        <tr><td>פערי ה-unique value מול פתרונות קיימים בשוק</td><td><span class="risk-high">🔴 גבוה</span></td><td>יש לנסח לפני פיתוח — מה SFI נותנת שלא קיים</td></tr>
+        <tr><td>מכרזים ורגולציה</td><td><span class="risk-med">🟡 בינוני</span></td><td>תלוי במודל ההפצה</td></tr>
+        <tr><td>אימוץ ע"י רשויות</td><td><span class="risk-med">🟡 בינוני</span></td><td>תלוי בנוחות השימוש</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- 10 -->
+  <div class="section" id="s10">
+    <div class="section-title"><span class="num">10</span> המלצות לשלב הבא</div>
+    <ol>
+      <li><strong>לבדוק את מפת הטף לעומק</strong> — לפני כל פיתוח. האם ה-API שלהם מכסה את מה שצריך? מה חסר? מה ה-unique value של SFI?</li>
+      <li><strong>לפנות ל-Aor (מערך הדיגיטל)</strong> — לפצח שאלת הרכש הרגולטורית לפני שמקדמים רשויות</li>
+      <li><strong>לבדוק גישה לנתונים</strong> — לוודא שניתן להוריד את קובץ משרד החינוך ולהבין את מבנהו</li>
+      <li><strong>להגדיר בעלות תחזוקה</strong> — מי אחראי אחרי שה-MVP עולה, לפני שמתחילים</li>
+      <li><strong>לדחות את הקהילתי</strong> — Facebook ו-NLP הם סיכון גבוה. MVP בנתונים רשמיים בלבד</li>
+      <li><strong>חוזה עם רשות הפיילוט</strong> — גם אם לא רשמי, לוודא שיש ממונה שמתחייב לזמן לבדיקת המוצר</li>
+    </ol>
+  </div>
+
+  <div class="page-footer">
+    טיוטה לדיון פנימי — לא להפצה חיצונית | SFI Data &amp; Measurement | מאי 2026
+  </div>
+
+</div>
+</body>
+</html>
