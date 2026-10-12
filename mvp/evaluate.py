@@ -39,6 +39,18 @@ def gt_kiryat_ata():
     return rows
 
 
+def gt_hadera():
+    df = pd.read_excel(ONEDRIVE / "2025חדרה/מיפוי מסגרות חינוך מעודכן 1.1.26.xlsx")
+    df = df[df["שם מסגרת"].notna()]
+    rows = []
+    for _, r in df.iterrows():
+        rows.append({"gt_name": clean(r["שם מסגרת"]), "gt_type": r["סוג מסגרת חינוך 0-3"], "gt_symbol": _sym(r["סמל"]),
+                     "gt_street": split_address(f"{_addr(r['רחוב'])} {_addr(r['מספר'])}")[0],
+                     "gt_num": _sym(r["מספר"]) or "", "gt_phone": phone_key(r.get("טלפון מנהלת")),
+                     "gt_address": f"{_addr(r['רחוב'])} {_addr(r['מספר'])}"})
+    return rows
+
+
 def gt_netanya():
     base = ONEDRIVE / "2026נתניה/חומרים מהלקוח/מיפוי מסגרות"
     rows = []
@@ -61,7 +73,7 @@ def gt_netanya():
     return rows
 
 
-GROUND_TRUTH = {"קרית אתא": gt_kiryat_ata, "נתניה": gt_netanya}
+GROUND_TRUTH = {"קרית אתא": gt_kiryat_ata, "חדרה": gt_hadera, "נתניה": gt_netanya}
 
 
 def match(gt, facilities):
@@ -122,7 +134,7 @@ def evaluate_city(city):
     src_rows = []
     fac_by_id = {f["מזהה מסגרת"]: f for f in facilities}
     for typ, grp in det[det["נמצא?"] == "כן"].groupby("סוג במיפוי הרשות"):
-        for src in ["משרד החינוך", "זרוע העבודה", "משרד הבריאות", "משרד הרווחה", "בדרך לגן", "Google Places"]:
+        for src in ["משרד החינוך", "זרוע העבודה", "משרד הבריאות", "משרד הרווחה", "בדרך לגן", "b144", "Google Places"]:
             n = sum(src in fac_by_id[i]["מקורות"] for i in grp["מזהה מסגרת"])
             src_rows.append({"סוג במיפוי הרשות": typ, "מקור": src, "נמצאו דרכו": n})
     src = pd.DataFrame(src_rows).pivot(index="סוג במיפוי הרשות", columns="מקור", values="נמצאו דרכו") \

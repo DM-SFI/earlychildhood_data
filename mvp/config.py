@@ -21,6 +21,13 @@ CITIES = {
         "radius_m": 4000,
         "bdl_slug": "קרית-אתא",
     },
+    "חדרה": {
+        "aliases": ["חדרה"],
+        "mol_town": 6500,
+        "center": (32.4365, 34.9196),
+        "radius_m": 6000,
+        "bdl_slug": "חדרה",
+    },
     "נתניה": {
         "aliases": ["נתניה"],
         "mol_town": 7400,

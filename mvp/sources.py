@@ -251,7 +251,31 @@ def baderechlagan(city):
     return out
 
 
-# ── 6. Google Places (מסחרי, אמינות נמוכה) ───────────────────────────────────
+# ── 6. b144 (מדריך עסקים, מסחרי) ────────────────────────────────────────────
+# עמודי b144 מציגים 15 תוצאות ראשונות בשרת; השאר נטענות עם טוקן סשן. לא עוקפים את זה —
+# הרשימה נאספת דרך דפדפן (לחיצה על "תוצאות נוספות") ונשמרת ב-data/manual/b144_<תאריך>.json.
+B144_SKIP = re.compile(r"יעוץ|רישוי גני|איגוד מורים|הנהלה|בניה|אגודות מוסדות")
+
+
+def b144(city):
+    files = sorted((RAW_DIR.parent / "manual").glob("b144_*.json"))
+    if not files:
+        return []
+    items = json.loads(files[-1].read_text(encoding="utf-8")).get(city, [])
+    out = []
+    for name, street_addr, loc, bid in items:
+        if not in_city(loc, CITIES[city]["aliases"]) or B144_SKIP.search(name):
+            continue
+        street, num = split_address(street_addr, CITIES[city]["aliases"])
+        out.append(_rec(
+            source="b144", source_id=bid, name=clean(name), address=street_addr, street=street,
+            house_number=num, city=city, source_type="לא ידוע",
+            extra={"url": f"https://www.b144.co.il/b144_sip/{bid}/", "file": files[-1].name},
+        ))
+    return out
+
+
+# ── 7. Google Places (מסחרי, אמינות נמוכה) ───────────────────────────────────
 GOOGLE_TERMS = ["משפחתון", "פעוטון", "מעון יום", "גן תינוקות", "גן פעוטות", "מטפלת לתינוקות"]
 GOOGLE_INCLUDE = re.compile(r"משפחתון|פעוטון|מעון|גן|תינוק|פעוט|טף|קטנטנים|baby|daycare|kids|מטפלת")
 GOOGLE_EXCLUDE = re.compile(r"כלב|חתול|dog|cat|חיות|ספר |בית ספר|יסודי|תיכון|חוג|ספורט|קאנטרי|חנות|צעצוע|"
@@ -307,4 +331,4 @@ def google_places(city):
     return out
 
 
-ALL_SOURCES = [moe, mol, health_rehab, welfare, baderechlagan, google_places]
+ALL_SOURCES = [moe, mol, health_rehab, welfare, baderechlagan, b144, google_places]
