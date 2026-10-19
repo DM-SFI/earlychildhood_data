@@ -30,7 +30,7 @@ from .normalize import clean, name_key, name_sim
 WORKBOOK = Path.home() / (
     "Library/CloudStorage/OneDrive-SocialFinanceIsrael/Data & Measurement site - Documents/"
     "ניהול פעילות הייעוץ/פרויקטי ייעוץ שלטון מקומי/יד הנדיב 24-25- מענים לתושבים/"
-    "אסטרטגיית נתונים לגיל הרך/4מדידה והערכה/שיפורים/ממשק מיפוי מסגרות/4 MVP דאטה סט/ריברס וסוכן/"
+    "אסטרטגיית נתונים לגיל הרך/5 כלי מיפוי מסגרות/4 MVP דאטה סט/ריברס וסוכן/"
     "ריברס ידני - כל הערוצים.xlsx"
 )
 SHEET_IN = "כיוון 1 – מהרשימה לערוץ"
