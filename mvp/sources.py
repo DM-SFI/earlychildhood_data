@@ -13,6 +13,7 @@ import time
 from datetime import date
 
 import requests
+from urllib.parse import quote
 
 from .config import CITIES, MOE_YEAR, MOL_YEAR, RAW_DIR, UA
 from .normalize import clean, in_city, split_address
@@ -200,37 +201,57 @@ def _strip(html):
     return re.sub(r"\s+", " ", re.sub(r"<[^>]+>", " ", html)).strip()
 
 
+def _bdl_parse(html, cards, seen):
+    """מוסיף ל-cards את הכרטיסים החדשים מתוך ה-HTML; מחזיר כמה נוספו."""
+    new = 0
+    for m in _CARD.finditer(html):
+        block = m.group(1)
+        gid = re.search(r'href="/gans/([0-9a-f]+)"', block)
+        if not gid or gid.group(1) in seen:
+            continue
+        seen.add(gid.group(1))
+        new += 1
+        title = re.search(r"<h4 class=\"pr10\">(.*?)</h4>", block, re.S)
+        title_txt = _strip(title.group(1)) if title else ""
+        name, _, kind = title_txt.partition("|")
+        addr = re.search(r'fa-map-marker"></i>\s*([^<]+)', block)
+        ages = re.search(r"גילאים:\s*</span>\s*([\d.]+)\s*עד\s*([\d.]+)", block)
+        kids = re.search(r'num-of-children[^>]*>(\d+)', block)
+        cards.append({"id": gid.group(1), "name": name.strip(), "kind": kind.strip(),
+                      "address": addr.group(1).strip() if addr else "",
+                      "age_min": float(ages.group(1)) if ages else None,
+                      "age_max": float(ages.group(2)) if ages else None,
+                      "max_children": int(kids.group(1)) if kids else None})
+    return new
+
+
 def baderechlagan(city):
     cfg = CITIES[city]
     path = _cache(f"bdl_{cfg['mol_town']}.json")
     if path.exists():
         cards = json.loads(path.read_text(encoding="utf-8"))
     else:
+        # העמוד מציג כ-25 גנים; השאר נטענים בכפתור "טען עוד גנים" — אותה קריאה שהאתר עצמו עושה
+        # (GET /search/<uid>?offset=25,50,...). robots.txt של האתר מתיר הכול.
+        s = requests.Session()
+        s.headers.update({"User-Agent": UA})
+        page_url = f"https://www.baderechlagan.co.il/ganei-yeladim/{quote(cfg['bdl_slug'])}"
+        html = s.get(page_url, timeout=60).text
+        uid = re.search(r'id="search_uid" value="([^"]+)"', html)
         cards, seen = [], set()
-        for page in range(1, 30):
-            url = f"https://www.baderechlagan.co.il/ganei-yeladim/{cfg['bdl_slug']}?page={page}"
-            html = requests.get(url, headers={"User-Agent": UA}, timeout=60).text
-            new = 0
-            for m in _CARD.finditer(html):
-                block = m.group(1)
-                gid = re.search(r'href="/gans/([0-9a-f]+)"', block)
-                if not gid or gid.group(1) in seen:
-                    continue
-                seen.add(gid.group(1))
-                new += 1
-                title = re.search(r"<h4 class=\"pr10\">(.*?)</h4>", block, re.S)
-                title_txt = _strip(title.group(1)) if title else ""
-                name, _, kind = title_txt.partition("|")
-                addr = re.search(r'fa-map-marker"></i>\s*([^<]+)', block)
-                ages = re.search(r"גילאים:\s*</span>\s*([\d.]+)\s*עד\s*([\d.]+)", block)
-                kids = re.search(r'num-of-children[^>]*>(\d+)', block)
-                cards.append({"id": gid.group(1), "name": name.strip(), "kind": kind.strip(),
-                              "address": addr.group(1).strip() if addr else "",
-                              "age_min": float(ages.group(1)) if ages else None,
-                              "age_max": float(ages.group(2)) if ages else None,
-                              "max_children": int(kids.group(1)) if kids else None})
-            if new == 0:
+        _bdl_parse(html, cards, seen)
+        offset = 25
+        while uid:
+            r = s.get(f"https://www.baderechlagan.co.il/search/{uid.group(1)}", params={"offset": offset},
+                      headers={"X-Requested-With": "XMLHttpRequest", "Referer": page_url,
+                               "Accept": "application/json, text/javascript, */*; q=0.01"}, timeout=60)
+            frag = r.json().get("gans", "") if r.ok else ""
+            added = _bdl_parse(frag + '<div id="gans-map"', cards, seen)
+            # החיפוש לפי מרחק ממשיך לערים שכנות; עוצרים כשאין יותר גנים בעיר עצמה
+            if not added or not any(in_city(c["address"], cfg["aliases"]) for c in cards[-added:]) \
+                    or offset > 2000:
                 break
+            offset += 25
             time.sleep(1.5)
         path.write_text(json.dumps(cards, ensure_ascii=False), encoding="utf-8")
 
@@ -331,4 +352,54 @@ def google_places(city):
     return out
 
 
-ALL_SOURCES = [moe, mol, health_rehab, welfare, baderechlagan, b144, google_places]
+# ── 8. easy.co.il (מסחרי) — דרך האינדקס של גוגל ────────────────────────────────
+# האתר חסום לגישה אוטומטית (בדיקת Cloudflare) ולא עוקפים את זה. במקום זה קוראים את מה
+# שגוגל אינדקס: עמודי עסק ("שם - כתובת, עיר - קטגוריה") ותקצירי עמודי רשימה של משפחתונים,
+# מעונות וגנים פרטיים. הכיסוי חלקי — תלוי במה שגוגל סרק.
+EASY_TERMS = ["משפחתון", "פעוטון", "מעון יום", "גן ילדים פרטי", "תינוקייה"]
+EASY_LISTS = re.compile(r"/list/(Pre-Nursery-Playgroups|Child-Care|Private-Kindergartens)\b")
+EASY_KEEP = re.compile(r"משפחתון|פעוטון|מעון|תינוק|פעוטות|גן ילדים פרטי|גן פרטי")
+EASY_CLOSED = "חשד שהמקום נסגר"
+
+
+def easy(city):
+    key = os.environ.get("SERPER_API_KEY")
+    if not key:
+        print("   ⚠️  אין SERPER_API_KEY — מדלג על easy")
+        return []
+    from .agent_reverse import _load_cache, _save_cache, search
+    cfg = CITIES[city]
+    alias = "|".join(map(re.escape, cfg["aliases"]))
+    page_re = re.compile(rf"^(.+?) - (.+?,\s*(?:{alias}))\s*-\s*(.+)$")
+    item_re = re.compile(rf"([^·;|]{{2,40}}?)\s*·\s*([^·;|]{{2,40}}?,\s*(?:{alias}))\.?")
+    cache, found = _load_cache(), {}
+    try:
+        for term in EASY_TERMS:
+            for page in (1, 2):
+                for h in search(f"site:easy.co.il {term} {city}", cache, key, page=page):
+                    link, title, snip = h["link"], h["title"], h["snippet"]
+                    m = page_re.match(title)
+                    if "/page/" in link and m:
+                        name, addr, cat = m.group(1).strip(), m.group(2).strip(), m.group(3)
+                        if EASY_KEEP.search(f"{name} {cat}") and not GOOGLE_EXCLUDE.search(name):
+                            found.setdefault(clean(name), (name, addr, cat, link, EASY_CLOSED in snip))
+                    elif EASY_LISTS.search(link) and any(a in title for a in cfg["aliases"]):
+                        for name, addr in item_re.findall(snip):
+                            name = name.strip(" .")
+                            if name and not re.search(r"לוגו|פתוח|סגור|ביקורות", name) \
+                                    and not GOOGLE_EXCLUDE.search(name):
+                                found.setdefault(clean(name), (name, addr.strip(), "מתוך רשימה", link, False))
+    finally:
+        _save_cache(cache)
+    out = []
+    for name, addr, cat, link, closed in found.values():
+        street, num = split_address(addr, cfg["aliases"])
+        out.append(_rec(
+            source="easy", source_id=link, name=clean(name), address=addr, street=street,
+            house_number=num, city=city, source_type="לא ידוע",
+            extra={"url": link, "category": cat, "suspected_closed": closed},
+        ))
+    return out
+
+
+ALL_SOURCES = [moe, mol, health_rehab, welfare, baderechlagan, b144, google_places, easy]
