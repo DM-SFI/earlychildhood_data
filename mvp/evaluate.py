@@ -134,7 +134,7 @@ def evaluate_city(city):
     src_rows = []
     fac_by_id = {f["מזהה מסגרת"]: f for f in facilities}
     for typ, grp in det[det["נמצא?"] == "כן"].groupby("סוג במיפוי הרשות"):
-        for src in ["משרד החינוך", "זרוע העבודה", "משרד הבריאות", "משרד הרווחה", "בדרך לגן", "b144", "Google Places"]:
+        for src in ["משרד החינוך", "זרוע העבודה", "משרד הבריאות", "משרד הרווחה", "בדרך לגן", "b144", "Google Places", "easy"]:
             n = sum(src in fac_by_id[i]["מקורות"] for i in grp["מזהה מסגרת"])
             src_rows.append({"סוג במיפוי הרשות": typ, "מקור": src, "נמצאו דרכו": n})
     src = pd.DataFrame(src_rows).pivot(index="סוג במיפוי הרשות", columns="מקור", values="נמצאו דרכו") \
@@ -162,7 +162,8 @@ def evaluate_city(city):
 
 def main():
     for city in CITIES:
-        evaluate_city(city)
+        if city in GROUND_TRUTH:  # ערים בלי מיפוי ידני (דימונה, רמת השרון) לא נבדקות כאן
+            evaluate_city(city)
 
 
 if __name__ == "__main__":
