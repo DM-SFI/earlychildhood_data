@@ -35,6 +35,21 @@ CITIES = {
         "radius_m": 7000,
         "bdl_slug": "נתניה",
     },
+    "דימונה": {
+        "aliases": ["דימונה"],
+        "mol_town": 2200,
+        "center": (31.0680, 35.0330),
+        "radius_m": 4000,
+        "bdl_slug": "דימונה",
+    },
+    "רמת השרון": {
+        "aliases": ["רמת השרון", "רמה\"ש", "רמהש"],
+        "mol_town": 2650,
+        "center": (32.1460, 34.8390),
+        "radius_m": 3500,
+        "bdl_slug": "רמת-השרון",
+    },
+
 }
 
 UA = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128 Safari/537.36"

@@ -61,13 +61,13 @@ def _save_cache(c):
     CACHE.write_text(json.dumps(c, ensure_ascii=False), encoding="utf-8")
 
 
-def search(q, cache, key):
-    h = hashlib.md5(q.encode()).hexdigest()
+def search(q, cache, key, page=1):
+    h = hashlib.md5(q.encode()).hexdigest() if page == 1 else hashlib.md5(f"{q}|p{page}".encode()).hexdigest()
     if h in cache:
         return cache[h]["organic"]
     r = requests.post("https://google.serper.dev/search",
                       headers={"X-API-KEY": key, "Content-Type": "application/json"},
-                      json={"q": q, "gl": "il", "hl": "iw", "num": 10}, timeout=30)
+                      json={"q": q, "gl": "il", "hl": "iw", "num": 10, "page": page}, timeout=30)
     r.raise_for_status()
     organic = [{"title": o.get("title", ""), "link": o.get("link", ""), "snippet": o.get("snippet", "")}
                for o in r.json().get("organic", [])]
