@@ -19,7 +19,7 @@ from .config import OUT_DIR
 from .normalize import clean, name_sim
 
 GOV_TYPES = {"מעון סמל", "משפחתון סמל", "מעון יום שיקומי", "מסגרת רווחה"}
-EXPORT_DIR = WORKBOOK.parent.parent / "בדיקה בעיר חדשה – דימונה ורמת השרון"
+EXPORT_DIR = WORKBOOK.parent.parent / "בדיקה בערים חדשות"
 
 
 def supervision(ftype):
@@ -85,6 +85,8 @@ def run(city, judgment_path):
         links = " ".join(hits[i]["link"] for i in c["ev"])
         src = sorted({hits[i]["channel"] for i in c["ev"]})
         f, s = match_layer1(c, fac)
+        if c.get("nomatch"):  # התאמה שגויה לפי שם דומה — נבדק ידנית
+            f = None
         if c.get("match"):
             f = next((x for x in fac if x["שם מסגרת"] == c["match"]), f)
         if f:

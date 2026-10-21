@@ -50,6 +50,13 @@ CITIES = {
         "bdl_slug": "רמת-השרון",
     },
 
+    "רחובות": {
+        "aliases": ["רחובות"],
+        "mol_town": 8400,
+        "center": (31.8948, 34.8113),
+        "radius_m": 5000,
+        "bdl_slug": "רחובות",
+    },
 }
 
 UA = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128 Safari/537.36"
