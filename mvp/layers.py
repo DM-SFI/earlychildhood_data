@@ -9,13 +9,14 @@
 """
 import argparse
 import json
+import html
 import re
 from pathlib import Path
 
 import pandas as pd
 
 from .agent_reverse import WORKBOOK
-from .config import OUT_DIR
+from .config import CITIES, OUT_DIR
 from .normalize import clean, name_sim
 
 GOV_TYPES = {"מעון סמל", "משפחתון סמל", "מעון יום שיקומי", "מסגרת רווחה"}
@@ -68,7 +69,9 @@ def match_layer1(cand, facilities):
 # ── סיווג מחמיר ל"פרטי לא מפוקח" ────────────────────────────────────────────
 # מסגרת נספרת כלא מפוקחת רק אם יש ראיה שהיא קטנה ולגילאי 0–3. כל השאר עובר לאחת
 # משתי הקטגוריות "כנראה מפוקח – כפילות" או "גיל/פיקוח לא ברורים".
-UNSUP, LIKELY_SUP, UNCLEAR = "פרטי לא מפוקח", "כנראה מפוקח – כפילות לבדיקה", "גן/מעון פרטי – גיל או פיקוח לא ברורים"
+UNSUP, LIKELY_SUP, UNCLEAR = "פרטי לא מפוקח", "חייבת ברישיון – לא ברשימה הרשמית", "גן/מעון פרטי – גיל או פיקוח לא ברורים"
+OFFICIAL_DUP = "כפילות של מסגרת מפוקחת"
+NAME_ONLY = "שם של מעון או רשת – לא הותאם לרשימה"
 NETWORK = re.compile(r"מעון|ויצו|ויצ ו|נעמ|חניכי|צעדים|רשת")
 SMALL = re.compile(r"משפחתון|משפחתוגן|פעוטון|תינוקי|גן ביתי|מטפלת")
 
@@ -82,8 +85,36 @@ def _bdl_cards(city):
     return {clean(c["name"]): c for c in json.loads(Path(files[-1]).read_text(encoding="utf-8"))}
 
 
+def official_match(name, address, official, city_aliases=()):
+    """התאמה לרשימה הרשמית. מחמיר בכוונה:
+    1. שם ייחודי זהה (בלי מילים גנריות ובלי שם העיר), מול שם המסגרת או שם הבעלים.
+    2. משפחתון סמל רשום בשם המטפלת — שם פרטי זהה לאחת המילים בשם המטפלת.
+    3. אותו רחוב ומספר בית ±2 — רק למסגרת שהשם שלה לא מעיד על משפחתון קטן."""
+    cities = {clean(a) for a in city_aliases} | {"ויצו", "ויצ", "ו", "נעמת", "נעמ", "ת", "צעדים", "קטנטנים", "פעוטות", "תינוקות"}
+    core = " ".join(w for w in _core(html.unescape(str(name))).split() if w not in cities)
+    st, num = _street(html.unescape(str(address)))
+    small = bool(SMALL.search(str(name)))
+    for o in official:
+        for field in (o["name"], o.get("owner", "")):
+            oc = " ".join(w for w in _core(field).split() if w not in cities)
+            if core and oc and len(core) >= 3 and core == oc:
+                return o["name"]
+        if small and o.get("type") == "משפחתון סמל" and core and len(core) >= 3 and " " not in core \
+                and core in _core(o["name"]).split():
+            return o["name"]
+        ost, onum = _street(f"{o['street'] or ''} {o['house_number'] or ''}")
+        if not small and st and ost and num and onum and name_sim(st, ost) > 0.85 \
+                and abs(int(num) - int(onum)) <= 2:
+            return o["name"]
+    return None
+
 def strict(df, city, cands):
     cards = _bdl_cards(city)
+    raw = pd.read_excel(OUT_DIR / f"מסגרות_{city}.xlsx", sheet_name="רשומות מקור")
+    official = [{"name": str(r["name"]), "owner": str(r["owner"]) if str(r["owner"]) != "nan" else "",
+                 "type": r["source_type"], "street": r["street"] if str(r["street"]) != "nan" else "",
+                 "house_number": str(r["house_number"]).split(".")[0] if str(r["house_number"]) != "nan" else ""}
+                for _, r in raw[raw["source"].isin(["משרד החינוך", "זרוע העבודה"])].iterrows()]
     kinds = {c["name"]: c for c in cands}
     sup_addr = {(_street(a)) for a in df.loc[df["שכבת פיקוח"] != UNSUP, "כתובת"] if _street(a)[1]}
     out = []
@@ -98,12 +129,15 @@ def strict(df, city, cands):
                     lvl, why = UNCLEAR, "גן או מעון – לא ברור שקטן ולגילאי 0–3"
             else:
                 card = cards.get(clean(name))
-                if NETWORK.search(name) or re.match(r"^\S+ \d+$", name):
-                    lvl, why = LIKELY_SUP, "שם של מעון או רשת"
+                om = official_match(name, r["כתובת"], official, CITIES[city]["aliases"])
+                if om:
+                    lvl, why = OFFICIAL_DUP, f"ברשימה הרשמית בשם '{om}'"
+                elif NETWORK.search(name) or re.match(r"^\S+ \d+$", name):
+                    lvl, why = NAME_ONLY, "שם של מעון או רשת, בלי התאמה לרשימה הרשמית"
                 elif _street(r["כתובת"])[1] and _street(r["כתובת"]) in sup_addr:
-                    lvl, why = LIKELY_SUP, "אותה כתובת כמו מסגרת מפוקחת"
-                elif card and (card.get("max_children") or 0) >= 7:
-                    lvl, why = LIKELY_SUP, f"עד {card['max_children']} ילדים – חייב ברישיון"
+                    lvl, why = OFFICIAL_DUP, "אותה כתובת כמו מסגרת מפוקחת"
+                elif card and (card.get("max_children") or 0) >= 7 and card.get("age_max") and card["age_max"] <= 3.5:
+                    lvl, why = LIKELY_SUP, f"עד {card['max_children']} ילדים בגילאי {card.get('age_min') or 0:g}–{card['age_max']:g} – חייב ברישיון"
                 elif card and card.get("age_max") and card["age_max"] > 3.5:
                     lvl, why = UNCLEAR, f"גן מעורב עד גיל {card['age_max']:g}"
                 elif card and card.get("max_children") and card["max_children"] <= 6:
@@ -167,7 +201,7 @@ def run(city, judgment_path):
                      "מקורות": "; ".join(src), "ודאות": c["conf"], "ראיה מהגילוי": links,
                      "הערה": c["note"]})
     df = strict(pd.DataFrame(rows), city, cands)
-    order = {"ממשלתי (סמל)": 0, "פרטי בפיקוח": 1, LIKELY_SUP: 2, UNSUP: 3, UNCLEAR: 4}
+    order = {"ממשלתי (סמל)": 0, "פרטי בפיקוח": 1, OFFICIAL_DUP: 2, NAME_ONLY: 3, LIKELY_SUP: 4, UNSUP: 5, UNCLEAR: 6}
     df = df.sort_values(by=["שכבת פיקוח", "נמצא בשכבה 1"], key=lambda s: s.map(order) if s.name == "שכבת פיקוח" else s,
                         ascending=[True, False])
 
