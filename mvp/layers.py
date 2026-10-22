@@ -65,6 +65,72 @@ def match_layer1(cand, facilities):
     return (best, best_s) if best_s >= 0.75 else (None, best_s)
 
 
+# ── סיווג מחמיר ל"פרטי לא מפוקח" ────────────────────────────────────────────
+# מסגרת נספרת כלא מפוקחת רק אם יש ראיה שהיא קטנה ולגילאי 0–3. כל השאר עובר לאחת
+# משתי הקטגוריות "כנראה מפוקח – כפילות" או "גיל/פיקוח לא ברורים".
+UNSUP, LIKELY_SUP, UNCLEAR = "פרטי לא מפוקח", "כנראה מפוקח – כפילות לבדיקה", "גן/מעון פרטי – גיל או פיקוח לא ברורים"
+NETWORK = re.compile(r"מעון|ויצו|ויצ ו|נעמ|חניכי|צעדים|רשת")
+SMALL = re.compile(r"משפחתון|משפחתוגן|פעוטון|תינוקי|גן ביתי|מטפלת")
+
+
+def _bdl_cards(city):
+    import glob
+    from .config import CITIES, RAW_DIR
+    files = sorted(glob.glob(str(RAW_DIR / "*" / f"bdl_{CITIES[city]['mol_town']}.json")))
+    if not files:
+        return {}
+    return {clean(c["name"]): c for c in json.loads(Path(files[-1]).read_text(encoding="utf-8"))}
+
+
+def strict(df, city, cands):
+    cards = _bdl_cards(city)
+    kinds = {c["name"]: c for c in cands}
+    sup_addr = {(_street(a)) for a in df.loc[df["שכבת פיקוח"] != UNSUP, "כתובת"] if _street(a)[1]}
+    out = []
+    for _, r in df.iterrows():
+        lvl, name, why = r["שכבת פיקוח"], str(r["שם מסגרת"]), ""
+        if lvl == UNSUP:
+            if r["נמצא בשכבה 1"] != "כן":  # רק בגילוי
+                c = kinds.get(name, {})
+                if c.get("conf") == "נמוכה":
+                    lvl, why = UNCLEAR, "ודאות נמוכה בגילוי"
+                elif not SMALL.search(f"{name} {c.get('kind', '')}"):
+                    lvl, why = UNCLEAR, "גן או מעון – לא ברור שקטן ולגילאי 0–3"
+            else:
+                card = cards.get(clean(name))
+                if NETWORK.search(name) or re.match(r"^\S+ \d+$", name):
+                    lvl, why = LIKELY_SUP, "שם של מעון או רשת"
+                elif _street(r["כתובת"])[1] and _street(r["כתובת"]) in sup_addr:
+                    lvl, why = LIKELY_SUP, "אותה כתובת כמו מסגרת מפוקחת"
+                elif card and (card.get("max_children") or 0) >= 7:
+                    lvl, why = LIKELY_SUP, f"עד {card['max_children']} ילדים – חייב ברישיון"
+                elif card and card.get("age_max") and card["age_max"] > 3.5:
+                    lvl, why = UNCLEAR, f"גן מעורב עד גיל {card['age_max']:g}"
+                elif card and card.get("max_children") and card["max_children"] <= 6:
+                    pass  # קטן ולגילאי 0–3 – נשאר
+                elif SMALL.search(name):
+                    pass
+                elif r["נמצא בשכבה 2"] == "כן" and SMALL.search(
+                        kinds.get(str(r["הערה"]).replace("בגילוי: ", ""), {}).get("kind", "")):
+                    pass
+                else:
+                    lvl, why = UNCLEAR, "אין מידע על גיל או גודל"
+        out.append((lvl, why))
+    df = df.copy()
+    df["שכבת פיקוח"] = [o[0] for o in out]
+    df["סיבת סיווג"] = [o[1] for o in out]
+    # כפילות: אותו שם בלי מילים גנריות ("משפחתון אביבית הכי קרוב לאמא" / "משפחתון הכי קרוב לאמא")
+    seen, keep = {}, []
+    for i, r in df.iterrows():
+        k = (r["שכבת פיקוח"], _core(str(r["שם מסגרת"])).replace("אביבית ", ""))
+        if r["שכבת פיקוח"] == UNSUP and k[1] and k in seen:
+            keep.append(False)
+            continue
+        seen[k] = i
+        keep.append(True)
+    return df[keep]
+
+
 def run(city, judgment_path):
     fac = pd.read_excel(OUT_DIR / f"מסגרות_{city}.xlsx").to_dict("records")
     hits = json.loads((OUT_DIR / f"discovery_{city}.json").read_text(encoding="utf-8"))
@@ -100,8 +166,8 @@ def run(city, judgment_path):
                      "כתובת": "", "נמצא בשכבה 1": "", "נמצא בשכבה 2": "כן",
                      "מקורות": "; ".join(src), "ודאות": c["conf"], "ראיה מהגילוי": links,
                      "הערה": c["note"]})
-    df = pd.DataFrame(rows)
-    order = {"ממשלתי (סמל)": 0, "פרטי בפיקוח": 1, "פרטי לא מפוקח": 2}
+    df = strict(pd.DataFrame(rows), city, cands)
+    order = {"ממשלתי (סמל)": 0, "פרטי בפיקוח": 1, LIKELY_SUP: 2, UNSUP: 3, UNCLEAR: 4}
     df = df.sort_values(by=["שכבת פיקוח", "נמצא בשכבה 1"], key=lambda s: s.map(order) if s.name == "שכבת פיקוח" else s,
                         ascending=[True, False])
 
