@@ -6,6 +6,7 @@
 # סודות — אף פעם לא ל-git
 .env
 .env.local
+.env*
 *_secret*
 *_key*
 

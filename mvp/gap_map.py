@@ -5,9 +5,9 @@
   איתות   — רישום לטרום-טרום: כמה ילדים הגיעו מ"משפחתון" / "בית" לפי שכונה (קובץ ללא מזהים)
   היצע    — מסגרות ידועות (ממשלתי + מאגר המשפחתונים של הרשות + לידים), משויכות לשכונה לפי טבלת רחובות
 
-מדד החשד: כל משפחתון "מוציא" בערך K ילדים לגן בשנה. מספר הילדים שהגיעו ממשפחתון בשכונה, חלקי K,
-נותן אומדן למספר המשפחתונים הפעילים. אומדן פחות משפחתונים ידועים = משפחתונים חשודים שלא מוכרים לנו.
-K הוא הנחה (ברירת מחדל 2) — לא נתון. המטרה היא דירוג שכונות לחיפוש, לא ספירה מדויקת.
+המדד: כמה ילדים שנרשמו לטרום-טרום הגיעו ממשפחתון בכל שכונה, לצד כמה משפחתונים אנחנו מכירים שם.
+אין כאן הנחה על כמה ילדים כל משפחתון שולח לגן (ההנחה K=2 הוסרה ב-26.11.2026, כי לא הייתה מבוססת
+על נתונים). המטרה היא דירוג שכונות לחיפוש, לא אומדן של מספר משפחתונים.
 
 הרצה:  set -a && source .env && set +a && python3 -m mvp.gap_map
 פלט:   data/output/מפת פערים_נתניה.xlsx + .html
@@ -27,7 +27,6 @@ from .normalize import clean, split_address, street_key, street_sim
 
 CITY = "נתניה"
 BASE = ONEDRIVE / "2026נתניה/חומרים מהלקוח"
-K_GRADUATES_PER_FAMILY_DAYCARE = 2
 MIN_KIDS = 30  # שכונות קטנות מזה (אזורי תעשייה) לא מוצגות
 
 
@@ -154,13 +153,10 @@ def build():
     df["% מהבית"] = (df["הגיעו מהבית"] / df["נרשמו לטרום-טרום"].replace(0, pd.NA) * 100).round(0)
     df["מעונות ל-100 ילדים"] = (df["מעון מפוקח"] / df["ילדים 0-2"] * 100).round(1)
     df["משפחתונים ידועים"] = df["משפחתון מוכר"] + df["משפחתון במאגר הרשות"]
-    df["אומדן משפחתונים פעילים"] = (df["הגיעו ממשפחתון"] / K_GRADUATES_PER_FAMILY_DAYCARE).round(0)
-    df["משפחתונים חשודים (לא ידועים)"] = (df["אומדן משפחתונים פעילים"] - df["משפחתונים ידועים"]).clip(lower=0)
-    df = df.sort_values("משפחתונים חשודים (לא ידועים)", ascending=False)
+    df = df.sort_values("הגיעו ממשפחתון", ascending=False)
     df.index.name = "שכונה"
     cols = ["ילדים 0-2", "נרשמו לטרום-טרום", "הגיעו ממשפחתון", "% ממשפחתון", "הגיעו מהבית", "% מהבית",
-            "מעון מפוקח", "מעונות ל-100 ילדים", "מקומות מאושרים (סמל)", "משפחתונים ידועים", "ליד",
-            "אומדן משפחתונים פעילים", "משפחתונים חשודים (לא ידועים)"]
+            "מעון מפוקח", "מעונות ל-100 ילדים", "מקומות מאושרים (סמל)", "משפחתונים ידועים", "ליד"]
     return df[cols], unplaced
 
 
@@ -168,9 +164,9 @@ def write(df, unplaced):
     OUT_DIR.mkdir(parents=True, exist_ok=True)
     xlsx = OUT_DIR / f"מפת פערים_{CITY}.xlsx"
     notes = pd.DataFrame([
-        ("שיטה", f"אומדן משפחתונים = ילדים שהגיעו ממשפחתון לרישום טרום-טרום ÷ {K_GRADUATES_PER_FAMILY_DAYCARE} "
-                 "(הנחה: כמה ילדים כל משפחתון מוציא לגן בשנה)"),
-        ("חשודים", "אומדן פחות משפחתונים ידועים (זרוע העבודה + מאגר הרשות). לדירוג שכונות — לא לספירה"),
+        ("שיטה", "לכל שכונה: כמה ילדים שנרשמו לטרום-טרום הגיעו ממשפחתון, לצד משפחתונים ידועים "
+                 "(זרוע העבודה + מאגר הרשות). אין אומדן של מספר משפחתונים, כי אין נתון על כמה ילדים "
+                 "כל משפחתון שולח לגן. לדירוג שכונות לחיפוש, לא לספירה"),
         ("לא שויכו לשכונה", json.dumps(unplaced, ensure_ascii=False) + " — בעיקר משפחתונים במאגר בלי כתובת"),
         ("מקורות", "גילאי לידה עד 3 לפי שכונות; רישום טרום טרום ללא מזהים; דוח שיוך רחובות לאזורים; "
                    "מאגר משפחתונים 8.2026; הדאטה סט של ה-MVP"),
@@ -193,8 +189,7 @@ def main():
     cents = geocode_hoods(df.index, street_table())
     html = write_html(df, unplaced, cents)
     (OUT_DIR / f"מפת פערים_{CITY}.json").write_text(json.dumps({
-        "rows": df.reset_index().to_dict(orient="records"), "centroids": cents, "unplaced": unplaced,
-        "k": K_GRADUATES_PER_FAMILY_DAYCARE}, ensure_ascii=False, default=float), encoding="utf-8")
+        "rows": df.reset_index().to_dict(orient="records"), "centroids": cents, "unplaced": unplaced}, ensure_ascii=False, default=float), encoding="utf-8")
     print(df.head(15).to_string())
     print("לא שויכו:", unplaced)
     print("→", path)
@@ -249,26 +244,23 @@ footer{font-size:12px;color:var(--ink3);margin-top:16px}
 </style></head><body>
 <header><div><div class="eyebrow">מיפוי מסגרות לידה-3 · נתניה</div>
 <h1>איפה צפויים <b>משפחתונים שאנחנו לא מכירים?</b></h1>
-<p class="lead">לכל שכונה: כמה ילדים שנרשמו לטרום-טרום הגיעו ממשפחתון, לעומת כמה משפחתונים אנחנו מכירים שם. הפער מצביע איפה כדאי לחפש — זה אומדן לדירוג שכונות, לא ספירה.</p></div>
+<p class="lead">לכל שכונה: כמה ילדים שנרשמו לטרום-טרום הגיעו ממשפחתון, לצד כמה משפחתונים אנחנו מכירים שם. שכונה עם הרבה ילדים ממשפחתון ומעט משפחתונים ידועים היא מקום טוב לחפש. זה דירוג שכונות, לא ספירה.</p></div>
 <img src="https://sfi.org.il/wp-content/uploads/2023/09/%D7%9C%D7%95%D7%92%D7%95-%D7%9E%D7%A2%D7%95%D7%93%D7%9B%D7%9F-2026.png" alt="SFI"></header>
-
-<div class="controls">הנחה: כל משפחתון שולח לגן בכל שנה <input type="range" id="k" min="1" max="4" step="0.5" value="__K__"> <b id="kv">__K__</b> ילדים בממוצע
-<span style="color:var(--ink3)">· הזיזו כדי לראות איך האומדן משתנה</span></div>
 
 <div class="kpis">
 <div class="kpi"><div class="n" id="k1"></div><div class="t">ילדים שנרשמו לטרום-טרום והגיעו ממשפחתון</div></div>
-<div class="kpi"><div class="n" id="k2"></div><div class="t">אומדן משפחתונים פעילים בעיר</div></div>
+<div class="kpi"><div class="n" id="k2"></div><div class="t">מכלל הנרשמים לטרום-טרום</div></div>
 <div class="kpi"><div class="n" id="k3"></div><div class="t">משפחתונים ידועים (זרוע העבודה + מאגר הרשות)</div></div>
-<div class="kpi"><div class="n" id="k4" style="color:var(--pink)"></div><div class="t">פער — משפחתונים שכנראה לא מוכרים</div></div>
+<div class="kpi"><div class="n" id="k4" style="color:var(--pink)"></div><div class="t">משפחתונים במאגר הרשות בלי כתובת (לא שויכו לשכונה)</div></div>
 </div>
 
 <div class="grid">
-<div class="card"><h2>מפה · גודל העיגול = משפחתונים חשודים · צבע = % שהגיעו ממשפחתון</h2><div id="map"></div>
+<div class="card"><h2>מפה · גודל העיגול = ילדים שהגיעו ממשפחתון · צבע = % מהנרשמים</h2><div id="map"></div>
 <div class="legend"><span>% מהנרשמים שהגיעו ממשפחתון:</span><div class="ramp"><span style="background:var(--s1)"></span><span style="background:var(--s2)"></span><span style="background:var(--s3)"></span><span style="background:var(--s4)"></span><span style="background:var(--s5)"></span></div><span>10% → 40%+</span></div></div>
-<div class="card"><h2>15 השכונות עם הפער הגדול ביותר</h2><div class="bars" id="bars"></div></div>
+<div class="card"><h2>15 השכונות עם הכי הרבה ילדים שהגיעו ממשפחתון</h2><div class="bars" id="bars"></div></div>
 </div>
 
-<div class="note"><b>לקרוא בזהירות:</b> ל-__UNPLACED__ משפחתונים במאגר הרשות אין כתובת, ולכן הם לא שויכו לשכונה — חלק מהפער הוא המשפחתונים האלה.
+<div class="note"><b>לקרוא בזהירות:</b> ל-__UNPLACED__ משפחתונים במאגר הרשות אין כתובת, ולכן הם לא נספרים כמשפחתונים ידועים באף שכונה.
 השלמת כתובות למאגר (משימה של נועה) תחדד את המפה. בקרית צאנז שיעור ההגעה ממשפחתון גבוה במיוחד (55%) — דפוס מוכר בשכונות חרדיות, שם המסגרות הביתיות הן חלק מרכזי מההיצע.</div>
 
 <div class="card tablewrap"><h2>כל השכונות (לחיצה על כותרת ממיינת)</h2><table id="tbl"></table></div>
@@ -282,31 +274,30 @@ const css=v=>getComputedStyle(document.documentElement).getPropertyValue(v.slice
 const map=L.map('map',{scrollWheelZoom:false}).setView([32.315,34.862],13);
 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'© OpenStreetMap',maxZoom:17}).addTo(map);
 let layer=L.layerGroup().addTo(map);
-function calc(k){return D.rows.map(r=>{const est=Math.round(r['הגיעו ממשפחתון']/k);return {...r,est,gap:Math.max(0,est-r['משפחתונים ידועים'])};});}
+const FROM='הגיעו ממשפחתון';
 function render(){
- const k=+document.getElementById('k').value;document.getElementById('kv').textContent=k;
- const rows=calc(k).sort((a,b)=>b.gap-a.gap);
+ const rows=[...D.rows].sort((a,b)=>b[FROM]-a[FROM]);
  const tot=s=>rows.reduce((a,r)=>a+r[s],0);
- document.getElementById('k1').textContent=fmt(tot('הגיעו ממשפחתון'));
- document.getElementById('k2').textContent=fmt(tot('est'));
- const known=tot('משפחתונים ידועים')+D.unplacedPool;
- document.getElementById('k3').textContent=fmt(known);
- document.getElementById('k4').textContent=fmt(Math.max(0,tot('est')-known));
+ document.getElementById('k1').textContent=fmt(tot(FROM));
+ const reg=tot('נרשמו לטרום-טרום');
+ document.getElementById('k2').textContent=reg?Math.round(tot(FROM)/reg*100)+'%':'–';
+ document.getElementById('k3').textContent=fmt(tot('משפחתונים ידועים')+D.unplacedPool);
+ document.getElementById('k4').textContent=fmt(D.unplacedPool);
  layer.clearLayers();
  rows.forEach(r=>{const c=D.centroids[r['שכונה']];if(!c)return;
-  const tip=`<div class="tip"><b>${r['שכונה']}</b><br>ילדים 0-2: ${fmt(r['ילדים 0-2'])}<br>נרשמו לטרום-טרום: ${fmt(r['נרשמו לטרום-טרום'])}<br>הגיעו ממשפחתון: ${fmt(r['הגיעו ממשפחתון'])} (${r['% ממשפחתון']}%)<br>משפחתונים ידועים: ${r['משפחתונים ידועים']} · מעונות מפוקחים: ${r['מעון מפוקח']}<br>אומדן משפחתונים: ${r.est} · <b>חשודים: ${r.gap}</b></div>`;
-  L.circleMarker([c.lat,c.lng],{radius:Math.max(5,Math.sqrt(r.gap)*4.2),color:'#fff',weight:2,fillColor:css(ramp(r['% ממשפחתון'])),fillOpacity:.9}).bindTooltip(tip,{direction:'top'}).addTo(layer);});
- const top=rows.slice(0,15),mx=Math.max(1,...top.map(r=>r.gap));
- document.getElementById('bars').innerHTML=top.map(r=>`<div class="bar" title="${r['שכונה']}: הגיעו ממשפחתון ${r['הגיעו ממשפחתון']}, ידועים ${r['משפחתונים ידועים']}, אומדן ${r.est}"><span>${r['שכונה']}</span><div class="track"><div class="fill" style="width:${r.gap/mx*100}%"></div></div><span class="v">${r.gap}</span></div>`).join('');
+  const tip=`<div class="tip"><b>${r['שכונה']}</b><br>ילדים 0-2: ${fmt(r['ילדים 0-2'])}<br>נרשמו לטרום-טרום: ${fmt(r['נרשמו לטרום-טרום'])}<br>הגיעו ממשפחתון: ${fmt(r['הגיעו ממשפחתון'])} (${r['% ממשפחתון']}%)<br><b>משפחתונים ידועים: ${r['משפחתונים ידועים']}</b> · מעונות מפוקחים: ${r['מעון מפוקח']}</div>`;
+  L.circleMarker([c.lat,c.lng],{radius:Math.max(5,Math.sqrt(r[FROM])*2.2),color:'#fff',weight:2,fillColor:css(ramp(r['% ממשפחתון'])),fillOpacity:.9}).bindTooltip(tip,{direction:'top'}).addTo(layer);});
+ const top=rows.slice(0,15),mx=Math.max(1,...top.map(r=>r[FROM]));
+ document.getElementById('bars').innerHTML=top.map(r=>`<div class="bar" title="${r['שכונה']}: הגיעו ממשפחתון ${r[FROM]}, משפחתונים ידועים ${r['משפחתונים ידועים']}"><span>${r['שכונה']}</span><div class="track"><div class="fill" style="width:${r[FROM]/mx*100}%"></div></div><span class="v">${r[FROM]}</span></div>`).join('');
  drawTable(rows);
 }
-const cols=[['שכונה','שכונה'],['ילדים 0-2','ילדים 0-2'],['נרשמו לטרום-טרום','נרשמו'],['הגיעו ממשפחתון','ממשפחתון'],['% ממשפחתון','% ממשפחתון'],['% מהבית','% מהבית'],['מעון מפוקח','מעונות מפוקחים'],['מעונות ל-100 ילדים','מעונות ל-100'],['משפחתונים ידועים','משפחתונים ידועים'],['ליד','לידים'],['est','אומדן משפחתונים'],['gap','חשודים']];
-let sortKey='gap',asc=false;
+const cols=[['שכונה','שכונה'],['ילדים 0-2','ילדים 0-2'],['נרשמו לטרום-טרום','נרשמו'],['הגיעו ממשפחתון','ממשפחתון'],['% ממשפחתון','% ממשפחתון'],['% מהבית','% מהבית'],['מעון מפוקח','מעונות מפוקחים'],['מעונות ל-100 ילדים','מעונות ל-100'],['משפחתונים ידועים','משפחתונים ידועים'],['ליד','לידים']];
+let sortKey=FROM,asc=false;
 function drawTable(rows){rows=[...rows].sort((a,b)=>{const x=a[sortKey],y=b[sortKey];return (typeof x==='string'?x.localeCompare(y,'he'):x-y)*(asc?1:-1);});
  document.getElementById('tbl').innerHTML='<tr>'+cols.map(([k,l])=>`<th class="${k==='שכונה'?'':'num'}" data-k="${k}">${l}${k===sortKey?(asc?' ▲':' ▼'):''}</th>`).join('')+'</tr>'+
  rows.map(r=>'<tr>'+cols.map(([k])=>`<td class="${k==='שכונה'?'':'num'}">${typeof r[k]==='number'?(k.includes('100')?r[k].toFixed(1):fmt(r[k])):r[k]}</td>`).join('')+'</tr>').join('');
  document.querySelectorAll('#tbl th').forEach(th=>th.onclick=()=>{const k=th.dataset.k;asc=sortKey===k?!asc:k==='שכונה';sortKey=k;render();});}
-document.getElementById('k').oninput=render;render();
+render();
 </script></body></html>"""
 
 
@@ -314,7 +305,6 @@ def write_html(df, unplaced, cents):
     data = {"rows": df.reset_index().to_dict(orient="records"), "centroids": cents,
             "unplacedPool": int(unplaced.get("משפחתון במאגר הרשות", 0))}
     html = (HTML_TEMPLATE.replace("__DATA__", json.dumps(data, ensure_ascii=False, default=float))
-            .replace("__K__", str(K_GRADUATES_PER_FAMILY_DAYCARE))
             .replace("__UNPLACED__", str(data["unplacedPool"]))
             .replace("__DATE__", date.today().strftime("%d.%m.%Y")))
     path = OUT_DIR / f"מפת פערים_{CITY}.html"
